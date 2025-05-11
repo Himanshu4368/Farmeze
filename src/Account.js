@@ -5,8 +5,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 const AccountScreen = ({ navigation }) => {
   const menuItems = [
     { icon: 'person', title: 'Account Details', navigateTo: 'AccountDetails' },
-    { icon: 'heart', title: 'Favorites', navigateTo: 'Favorites' },
-    { icon: 'location', title: 'Location', navigateTo: 'Location' },
+    { icon: 'heart', title: 'Favourites', navigateTo: 'FavouritesScreen' },
+    // { icon: 'location', title: 'Location', navigateTo: 'Location' },
     { icon: 'log-out', title: 'Logout/(SignIn/SignUp)', navigateTo: 'AuthScreen' },
   ];
 

@@ -5,12 +5,16 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack'; // ✅ IMPORT STACK
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import SplashScreen from 'react-native-splash-screen';
-
+import HomeIcon from 'react-native-vector-icons/AntDesign';
 import Homescreen from './src/Homescreen';
 import Cart from './src/Cart';
 import OrderScreen from './src/Order';
 import Veggies from './src/Veggies'; // ✅ IMPORT VEGGIES SCREEN
 import ProductScreen from './src/ProductScreen';
+import AuthScreen from './src/screen/AuthScreen';
+import AccountScreen from './src/Account';
+import AccountDetails from './src/AccountDetails';
+import FavouritesScreen from './src/Favourites';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator(); // ✅ CREATE STACK
@@ -22,7 +26,11 @@ function HomeStack() {
       <Stack.Screen name="HomeScreen" component={Homescreen} options={{ headerShown: false }} />
       <Stack.Screen name="Veggies" component={Veggies} options={{ headerShown: false }} />
       <Stack.Screen name="ProductScreen" component={ProductScreen} options={{ headerShown: false }} />
-
+      <Stack.Screen name="Account" component={AccountScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="AuthScreen" component={AuthScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="AccountDetails" component={AccountDetails} options={{ headerShown: false }} />
+      <Stack.Screen name="FavouritesScreen" component={FavouritesScreen} options={{ headerShown: false }} />
+      
     </Stack.Navigator>
   );
 }
@@ -40,7 +48,7 @@ function TabNavigator() {
           backgroundColor: 'rgb(255, 255, 255)',
           height: 85,
         },
-        tabBarActiveTintColor: 'rgb(255, 255, 255)',
+        tabBarActiveTintColor: 'white', 
         tabBarActiveBackgroundColor: 'rgb(37, 187, 0)',
       }}
     >
@@ -49,7 +57,7 @@ function TabNavigator() {
         component={HomeStack} // ✅ USE HomeStack instead of Homescreen directly
         options={{
           tabBarIcon: ({ size, color }) => (
-            <Icon name="home" size={size} color={color} />
+            <HomeIcon name="home" size={30} color={color} />
           ),
         }}
       />
@@ -85,7 +93,7 @@ const App = () => {
       <NavigationContainer>
         <TabNavigator />
       </NavigationContainer>
-    
+   
 
   );
 };

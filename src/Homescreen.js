@@ -43,6 +43,7 @@ import Header from './Header';
 import FreshnessCard from './FreshnessCard';
 import Categories from './Categories';
 import Popular from './Popular';
+import AccountScreen from './Account';
 
 const Homescreen = ({ navigation }) => {
   return (

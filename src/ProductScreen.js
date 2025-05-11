@@ -2,10 +2,11 @@
 import React, { useState } from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
-import { useCart } from './CartContext'; 
+
 const ProductScreen = ({ route, navigation }) => {
   const { item } = route.params; // Receive item from Popular screen
   const [quantity, setQuantity] = useState(1);
+  
   
   
   return (
