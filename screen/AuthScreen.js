@@ -1,0 +1,188 @@
+
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const BASE_URL = 'http://192.168.1.17:5000/api/auth';
+
+const AuthScreen = ({ navigation, route }) => {
+  const { isLogin: routeIsLogin = false } = route?.params || {};
+  const [isLogin, setIsLogin] = useState(routeIsLogin);
+  const [step, setStep] = useState(1);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+
+  const handleRequestOtp = async () => {
+    if (!phone || (!isLogin && !name)) {
+      Alert.alert('Error', 'Please fill all fields.');
+      return;
+    }
+
+    const endpoint = isLogin ? 'login/request-otp' : 'signup/request-otp';
+    const body = isLogin ? { phone } : { phone, name };
+
+    try {
+      const response = await fetch(`${BASE_URL}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+      console.log("OTP Response:", data); // Debugging
+
+      if (response.ok) {
+        Alert.alert('OTP Sent', 'An OTP has been sent to your phone.');
+        setStep(2);
+      } else {
+        Alert.alert('Error', data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      console.error("OTP Request Error:", error);
+      Alert.alert('Error', 'Something went wrong. Try again.');
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp || !phone) {
+      Alert.alert('Error', 'Please enter OTP.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BASE_URL}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp }),
+      });
+
+      const data = await response.json();
+      console.log("Verify OTP response:", data);
+
+      if (response.ok) {
+        await AsyncStorage.setItem('token', data.token);
+        Alert.alert('Success', 'Logged in successfully!');
+        navigation.replace('Main'); // Navigate to main screen
+      } else {
+        Alert.alert('Error', data.message || 'Invalid OTP');
+      }
+    } catch (error) {
+      console.error("OTP verification failed:", error);
+      Alert.alert('Error', 'OTP verification failed.');
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
+        <Icon name="arrow-back" size={24} color="white" />
+      </TouchableOpacity>
+
+      <Text style={styles.title}>{isLogin ? 'Login' : 'Signup'}</Text>
+
+      <View style={styles.box}>
+        {step === 1 ? (
+          <>
+            {!isLogin && (
+              <TextInput
+                style={styles.input}
+                placeholder="Your Name"
+                placeholderTextColor="#666"
+                value={name}
+                onChangeText={setName}
+              />
+            )}
+            <TextInput
+              style={styles.input}
+              placeholder="Phone Number"
+              placeholderTextColor="#666"
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
+            />
+            <TouchableOpacity style={styles.button} onPress={handleRequestOtp}>
+              <Text style={styles.buttonText}>Send OTP</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter OTP"
+              placeholderTextColor="#666"
+              keyboardType="numeric"
+              value={otp}
+              onChangeText={setOtp}
+            />
+            <TouchableOpacity style={styles.button} onPress={handleVerifyOtp}>
+              <Text style={styles.buttonText}>Verify OTP</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#25BB00',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 10,
+  },
+  box: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 15,
+    width: '90%',
+    alignItems: 'center',
+    elevation: 5,
+  },
+  input: {
+    width: '100%',
+    height: 50,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 15,
+    paddingHorizontal: 15,
+    color: 'black',
+  },
+  button: {
+    backgroundColor: '#25BB00',
+    padding: 15,
+    borderRadius: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  backIcon: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    padding: 10,
+    zIndex: 1,
+  },
+});
+
+export default AuthScreen;
