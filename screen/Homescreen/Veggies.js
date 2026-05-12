@@ -29,7 +29,7 @@ const Veggies = ({ navigation, route }) => {
   }, [query]);
 
   const handleNavigateToProduct = (item) => {
-    navigation.navigate('ProductScreen', { vegetable: item });
+    navigation.navigate('ProductDescription', { vegetable: item });
   };
 
   return (

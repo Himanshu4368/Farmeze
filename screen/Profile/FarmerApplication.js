@@ -1,7 +1,11 @@
+
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 const FarmerApplication = () => {
+  const navigation = useNavigation();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [village, setVillage] = useState('');
@@ -12,6 +16,11 @@ const FarmerApplication = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* Back Button */}
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Ionicons name="arrow-back" size={26} color="#4CAF50" />
+      </TouchableOpacity>
+
       <Text style={styles.title}>Farmer Application</Text>
 
       <TextInput
@@ -46,12 +55,18 @@ const styles = StyleSheet.create({
     padding: 25,
     backgroundColor: '#e6ffe6',
     flexGrow: 1,
-    justifyContent: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    zIndex: 10,
   },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
     textAlign: 'center',
+    marginTop: 70,
     marginBottom: 25,
   },
   input: {

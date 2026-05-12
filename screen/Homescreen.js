@@ -6,10 +6,10 @@ import Header from './Homescreen/Header';
 import FreshnessCard from './Homescreen/FreshnessCard';
 import Categories from './Homescreen/Categories';
 import Popular from './Homescreen/Popular';
+import OurFarmers from './Homescreen/OurFarmers';
 
 const Homescreen = ({ navigation }) => {
   const [userName, setUserName] = useState('');
-  const [userPhone, setUserPhone] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
 
   useEffect(() => {
@@ -19,7 +19,6 @@ const Homescreen = ({ navigation }) => {
         if (userData) {
           const user = JSON.parse(userData);
           setUserName(user.name || 'Farmer');
-          setUserPhone(user.phone || '');
         }
       } catch (error) {
         console.log('Failed to load user data', error);
@@ -47,8 +46,6 @@ const Homescreen = ({ navigation }) => {
     <View style={styles.container}>
       <Header navigation={navigation} />
 
-      {/* Removed permanent greeting here */}
-
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
@@ -56,6 +53,9 @@ const Homescreen = ({ navigation }) => {
         <FreshnessCard />
         <Categories />
         <Popular navigation={navigation} />
+
+        {/* ✅ Added Our Farmers section */}
+        <OurFarmers />
       </ScrollView>
     </View>
   );
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgb(200, 230, 200)',
   },
   scrollContainer: {
-    paddingBottom: 20,
+    paddingBottom: 30, // little extra space for smooth scroll
   },
   welcomeContainer: {
     flex: 1,

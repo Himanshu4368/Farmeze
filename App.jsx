@@ -9,7 +9,6 @@ import { View, Text } from 'react-native';
 import OrderScreen from './screen/Order';
 import HomeScreen from './screen/Homescreen.js';
 import Cart from './screen/Cart';
-
 import AccountScreen from './screen/Account';
 import NotificationsScreen from './screen/Notification';
 import Veggies from './screen/Homescreen/Veggies.js';
@@ -25,9 +24,12 @@ import OtpVerificationScreen from './screen/Profile/OtpVerfication.js';
 import { CartProvider, useCart } from './screen/Homescreen/CartContext';
 import MessageBox from './screen/Profile/MessageBox.js';
 import OrderPlacedScreen from './screen/OrderPlacedScreen.js';
-// import VeggieResultsScreen from './screen/VeggiesResultScreen.js';
-import OnionScreen from './screen/Onion.js';
-import PotatoScreen from './screen/Potato.js';
+// import VeggieResultsScreen from './screen/VeggiesResultScreen.js;
+import Checkout from './screen/Checkout.js';
+import Homescreen from './screen/Homescreen.js';
+import ComingSoonScreen from './screen/Homescreen/ComingSoonScreen.js';
+import OurFarmers from './screen/Homescreen/OurFarmers.js';
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -35,7 +37,7 @@ const Stack = createNativeStackNavigator();
 function HomeStack() {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="HomeScreen" component={HomeScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="HomeScreen" component={Homescreen} options={{ headerShown: false }} />
       <Stack.Screen name="Veggies" component={Veggies} options={{ headerShown: false }} />
       <Stack.Screen name="ProductDescription" component={ProductScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Account" component={AccountScreen} options={{ headerShown: false }} />
@@ -46,22 +48,20 @@ function HomeStack() {
       <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="OrderScreen" component={OrderScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Cart" component={Cart} options={{ headerShown: false }} />
+      <Stack.Screen name="Checkout" component ={Checkout} options={{headerShown:false}}/>
       <Stack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SignupScreen" component={SignupScreen} options={{ headerShown: false }} />
       <Stack.Screen name="OtpVerificationScreen" component={OtpVerificationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="FarmerApplication" component={FarmerApplication} options={{ headerShown: false }} />
       <Stack.Screen name="MessageBox" component={MessageBox} options={{ headerShown: false }} />
       <Stack.Screen name="OrderPlacedScreen" component={OrderPlacedScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="OnionScreen" component={OnionScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="PotatoScreen" component={PotatoScreen} options={{ headerShown: false }} />
-      
-
-      {/* <Stack.Screen name="VeggieResultsScreen" component={VeggieResultsScreen} options={{ headerShown: false }} /> */}
+      <Stack.Screen name ="ComingSoonScreen" component ={ComingSoonScreen} options={{headerShown:false}}/>
+      <Stack.Screen name ="OurFarmers" component ={OurFarmers} options={{headerShown:false}}/>
     </Stack.Navigator>
   );
 }
 
-// Tab Navigator as a separate component wrapped inside CartProvider
+
 function TabNavigatorWithCartBadge() {
   const { cart } = useCart();
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);

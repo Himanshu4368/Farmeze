@@ -23,7 +23,7 @@ const Categories = () => {
         </TouchableOpacity>
 
         {/* Fruits Category (no nav yet) */}
-        <TouchableOpacity style={styles.categoryItem}>
+        <TouchableOpacity style={styles.categoryItem} onPress={() => navigation.navigate('ComingSoonScreen')}>
           <View style={styles.iconContainer}>
             <Icon name="apple" size={30} color="white" />
           </View>
@@ -31,7 +31,7 @@ const Categories = () => {
         </TouchableOpacity>
 
         {/* Others Category */}
-        <TouchableOpacity style={styles.categoryItem}>
+        <TouchableOpacity style={styles.categoryItem} onPress={() => navigation.navigate('ComingSoonScreen')}>
           <View style={styles.iconContainer}>
             <Icon name="category" size={30} color="white" />
           </View>

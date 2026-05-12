@@ -1,88 +1,222 @@
 
 import React, { useState } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+} from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
+import { useCart } from "../screen/Homescreen/CartContext";
 
-const ProductScreen = ({ route, navigation }) => {
-  const { item } = route.params; // Receive item from Popular screen
+export default function ProductScreen({ route, navigation }) {
+  const { vegetable } = route.params;
+  const { addToCart } = useCart();
+
   const [quantity, setQuantity] = useState(1);
-  
-  
-  
+  const [review, setReview] = useState("");
+  const [reviews, setReviews] = useState([
+    { name: "Amit", text: "Very fresh and clean quality" },
+    { name: "Neha", text: "Best vegetables I bought online" },
+  ]);
+
+  const rating = 4.7;
+
+  const pricePerKg = parseInt(vegetable.price.replace(/\D/g, "")) || 0;
+  const total = pricePerKg * quantity;
+
+  const handleAddToCart = () => {
+    addToCart({
+      name: vegetable.name,
+      image: vegetable.image,
+      pricePerKg,
+      quantity,
+    });
+    navigation.navigate("Cart");
+  };
+
+  const submitReview = () => {
+    if (review.trim() === "") return;
+    setReviews([{ name: "You", text: review }, ...reviews]);
+    setReview("");
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: "#F5F5F5" }}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={24} color="green" />
+          <Icon name="arrow-left" size={22} />
         </TouchableOpacity>
-        <Icon name="bell" size={24} color="green" />
+        <Text style={styles.headerTitle}>Product Details</Text>
+        <View style={{ width: 22 }} />
       </View>
 
-      {/* Image */}
-      <Image source={item.image} style={styles.image} />
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Image */}
+        <View style={styles.imageContainer}>
+          <Image source={vegetable.image} style={styles.image} />
+        </View>
 
-      {/* Product Details */}
-      <View style={styles.details}>
-        <Text style={styles.title}>
-          {item.name} <Text style={styles.subTitle}>(Sugar Free)</Text>
-        </Text>
+        {/* Product Info */}
+        <View style={styles.card}>
+          <Text style={styles.name}>{vegetable.name}</Text>
+          <Text style={styles.price}>{vegetable.price}</Text>
 
-        {/* Price and Rating */}
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>{item.price}</Text>
-          <View style={styles.rating}>
-            <Text style={styles.ratingText}>{item.rating}</Text>
-            <Icon name="star" size={16} color="green" />
+          {/* ⭐ Rating */}
+          <View style={styles.ratingRow}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Icon
+                key={i}
+                name="star"
+                size={16}
+                color={i <= Math.floor(rating) ? "#FFD700" : "#ccc"}
+              />
+            ))}
+            <Text style={{ marginLeft: 8 }}>{rating} (124 ratings)</Text>
           </View>
-        </View>
 
-        {/* Quantity Selector */}
-        <View style={styles.quantityContainer}>
-          <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))}>
-            <Icon name="minus-circle" size={24} color="green" />
-          </TouchableOpacity>
-          <Text style={styles.quantity}>{quantity}Kg</Text>
-          <TouchableOpacity onPress={() => setQuantity(quantity + 1)}>
-            <Icon name="plus-circle" size={24} color="green" />
-          </TouchableOpacity>
-        </View>
+          {/* Quantity */}
+          <View style={styles.qtyRow}>
+            <TouchableOpacity
+              style={styles.qtyBtn}
+              onPress={() => setQuantity(Math.max(1, quantity - 1))}
+            >
+              <Icon name="minus" />
+            </TouchableOpacity>
 
-        {/* Description */}
-        <Text style={styles.sectionTitle}>Item Description</Text>
-        <Text style={styles.description}>
-          {item.description}
-        </Text>
+            <Text style={styles.qtyText}>{quantity} Kg</Text>
 
-        {/* Add to Cart Button */}
-        <TouchableOpacity style={styles.addToCart}>
-          <Text style={styles.addToCartText}>Add to cart</Text>
-          <Text style={styles.price}>
-            Rs.{parseInt(item.price.replace(/\D/g, "")) * quantity}
+            <TouchableOpacity
+              style={styles.qtyBtn}
+              onPress={() => setQuantity(quantity + 1)}
+            >
+              <Icon name="plus" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Description */}
+          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.desc}>
+            Premium quality {vegetable.name}, fresh from farms, hygienically packed and delivered to your doorstep.
           </Text>
+
+          {/* 📝 Write Review */}
+          <Text style={styles.sectionTitle}>Write a Review</Text>
+          <TextInput
+            value={review}
+            onChangeText={setReview}
+            placeholder="Write your experience..."
+            style={styles.reviewInput}
+          />
+          <TouchableOpacity style={styles.submitBtn} onPress={submitReview}>
+            <Text style={{ color: "#fff" }}>Submit Review</Text>
+          </TouchableOpacity>
+
+          {/* 💬 Reviews */}
+          <Text style={styles.sectionTitle}>Customer Reviews</Text>
+          {reviews.map((r, i) => (
+            <View key={i} style={styles.reviewBox}>
+              <Text style={styles.reviewName}>{r.name}</Text>
+              <Text>{r.text}</Text>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* Bottom */}
+      <View style={styles.bottomBar}>
+        <View>
+          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.totalPrice}>₹{total}</Text>
+        </View>
+
+        <TouchableOpacity style={styles.cartBtn} onPress={handleAddToCart}>
+          <Text style={styles.cartText}>Add to Cart</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#E8F5E9", alignItems: "center" },
-  header: { flexDirection: "row", justifyContent: "space-between", width: "90%", marginTop: 40 },
-  image: { width: 300, height: 200, resizeMode: "contain", marginVertical: 20 },
-  details: { width: "90%", backgroundColor: "#fff", padding: 20, borderRadius: 15 },
-  title: { fontSize: 20, fontWeight: "bold" },
-  subTitle: { fontSize: 16, color: "gray" },
-  priceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  price: { fontSize: 18, color: "green", fontWeight: "bold" },
-  rating: { flexDirection: "row", alignItems: "center" },
-  ratingText: { fontSize: 16, fontWeight: "bold", marginRight: 5 },
-  quantityContainer: { flexDirection: "row", alignItems: "center", marginVertical: 10 },
-  quantity: { fontSize: 18, fontWeight: "bold", marginHorizontal: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: "bold", marginTop: 10 },
-  description: { fontSize: 14, color: "gray" },
-  addToCart: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "green", padding: 15, borderRadius: 10, marginTop: 20 },
-  addToCartText: { color: "#fff", fontSize: 18, fontWeight: "bold" }
-});
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 15,
+    backgroundColor: "#fff",
+    elevation: 4,
+  },
+  headerTitle: { fontSize: 18, fontWeight: "bold" },
 
-export default ProductScreen;
+  imageContainer: {
+    backgroundColor: "#fff",
+    height: 300,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  image: { width: "85%", height: "85%", resizeMode: "contain" },
+
+  card: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+  },
+
+  name: { fontSize: 22, fontWeight: "bold" },
+  price: { fontSize: 20, color: "#2E7D32", marginVertical: 8 },
+
+  ratingRow: { flexDirection: "row", alignItems: "center", marginVertical: 8 },
+
+  qtyRow: { flexDirection: "row", alignItems: "center", marginVertical: 15 },
+  qtyBtn: { borderWidth: 1, borderColor: "#ccc", padding: 8, borderRadius: 8 },
+  qtyText: { marginHorizontal: 15, fontSize: 18, fontWeight: "bold" },
+
+  sectionTitle: { fontSize: 16, fontWeight: "bold", marginTop: 15 },
+  desc: { fontSize: 14, color: "#555", marginTop: 5 },
+
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 10,
+  },
+  submitBtn: {
+    backgroundColor: "#2E7D32",
+    alignSelf: "flex-end",
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+
+  reviewBox: {
+    backgroundColor: "#F1F8E9",
+    padding: 10,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  reviewName: { fontWeight: "bold", color: "#2E7D32" },
+
+  bottomBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 15,
+    backgroundColor: "#fff",
+    elevation: 10,
+  },
+  totalLabel: { color: "#888" },
+  totalPrice: { fontSize: 20, fontWeight: "bold", color: "#2E7D32" },
+
+  cartBtn: {
+    backgroundColor: "#2E7D32",
+    paddingHorizontal: 40,
+    paddingVertical: 12,
+    borderRadius: 30,
+  },
+  cartText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+});
