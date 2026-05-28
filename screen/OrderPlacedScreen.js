@@ -40,7 +40,7 @@ export default function OrderPlacedScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#d6f9c5',
+    backgroundColor: '#F3FAF1',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -52,13 +52,13 @@ const styles = StyleSheet.create({
     elevation: 7,
   },
   title: {
-    color: '#38C71C',
+    color: '#1F7A35',
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 18,
-    color: '#555',
+    color: '#475467',
   },
 });

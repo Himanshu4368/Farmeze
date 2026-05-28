@@ -7,10 +7,12 @@ import FreshnessCard from './Homescreen/FreshnessCard';
 import Categories from './Homescreen/Categories';
 import Popular from './Homescreen/Popular';
 import OurFarmers from './Homescreen/OurFarmers';
+import { getFeaturedProducts, getProducts } from '../api/productApi';
 
 const Homescreen = ({ navigation }) => {
   const [userName, setUserName] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
+  const [products, setProducts] = useState([]);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -34,6 +36,26 @@ const Homescreen = ({ navigation }) => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const featuredProducts = await getFeaturedProducts();
+
+        if (featuredProducts.length > 0) {
+          setProducts(featuredProducts);
+          return;
+        }
+
+        const allProducts = await getProducts();
+        setProducts(allProducts);
+      } catch (error) {
+        console.log('Failed to load products', error);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
   if (showWelcome) {
     return (
       <View style={styles.welcomeContainer}>
@@ -52,7 +74,7 @@ const Homescreen = ({ navigation }) => {
       >
         <FreshnessCard />
         <Categories />
-        <Popular navigation={navigation} />
+        <Popular navigation={navigation} products={products} />
 
         {/* ✅ Added Our Farmers section */}
         <OurFarmers />
@@ -66,7 +88,7 @@ export default Homescreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgb(200, 230, 200)',
+    backgroundColor: '#F3FAF1',
   },
   scrollContainer: {
     paddingBottom: 30, // little extra space for smooth scroll
@@ -75,11 +97,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#e1fbe1',
+    backgroundColor: '#F3FAF1',
   },
   welcomeText: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#388e3c',
+    color: '#1F7A35',
   },
 });

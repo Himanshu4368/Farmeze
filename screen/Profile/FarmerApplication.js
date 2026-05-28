@@ -53,7 +53,7 @@ const FarmerApplication = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 25,
-    backgroundColor: '#e6ffe6',
+    backgroundColor: '#F3FAF1',
     flexGrow: 1,
   },
   backButton: {
@@ -68,17 +68,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 70,
     marginBottom: 25,
+    color: '#1F2A1F',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: '#D0D5DD',
     borderRadius: 8,
     padding: 12,
     marginBottom: 20,
     backgroundColor: '#fff',
+    color: '#1F2A1F',
   },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#25BB00',
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',

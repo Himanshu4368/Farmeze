@@ -120,7 +120,7 @@ const ComingSoonScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#91bc89" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F3FAF1" />
 
       {/* 🌿 Wallpaper Pattern */}
       <VeggiePattern />
@@ -171,7 +171,7 @@ export default ComingSoonScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#91bc89", // ✅ softer green background
+    backgroundColor: "#F3FAF1",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   card: {
     width: "85%",
     backgroundColor: "#fff",
-    borderRadius: 25,
+    borderRadius: 16,
     paddingVertical: 30,
     paddingHorizontal: 20,
     alignItems: "center",
@@ -189,24 +189,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 10,
+    borderWidth: 1,
+    borderColor: "#DDEFD8",
   },
 
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#2E7D32",
+    color: "#1F7A35",
     marginTop: 12,
   },
 
   subtitle: {
     fontSize: 15,
-    color: "#666",
+    color: "#475467",
     textAlign: "center",
     marginVertical: 15,
   },
 
   button: {
-    backgroundColor: "#38C71C",
+    backgroundColor: "#25BB00",
     paddingVertical: 12,
     paddingHorizontal: 35,
     borderRadius: 25,

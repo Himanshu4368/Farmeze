@@ -1,5 +1,9 @@
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
-import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Image,
@@ -8,38 +12,102 @@ import {
   Dimensions,
   ActivityIndicator,
 } from "react-native";
+
 import axios from "axios";
 
-// ✅ local default image
 import defaultBanner from "../../assets/default-banner.jpg";
 
 const { width } = Dimensions.get("window");
 
-// ✅ fallback banner
+const API_URL =
+  "https://farmeze-backend-4.onrender.com/api/content";
+
 const DEFAULT_BANNERS = [
   {
-    id: "default-1",
-    imageUrl: null,
+    _id: "default-1",
+    image: null,
     localImage: defaultBanner,
   },
 ];
 
 const FreshnessCard = () => {
-  const [banners, setBanners] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
 
-  const flatListRef = useRef();
+  const [banners, setBanners] =
+    useState(DEFAULT_BANNERS);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [currentIndex, setCurrentIndex] =
+    useState(0);
+
+  const flatListRef = useRef(null);
+
+  // FETCH BANNERS
+
+  const fetchBanners = async () => {
+
+    try {
+
+      const response =
+        await axios.get(API_URL);
+
+      console.log(
+        "BANNERS:",
+        response.data
+      );
+
+      // FILTER ONLY ACTIVE BANNERS
+
+      const activeBanners =
+        response.data.filter(
+          (item) =>
+            item.type === "banner" &&
+            item.isActive
+        );
+
+      if (activeBanners.length > 0) {
+
+        setBanners(activeBanners);
+
+      } else {
+
+        setBanners(DEFAULT_BANNERS);
+      }
+
+    } catch (error) {
+
+      console.log(
+        "BANNER ERROR:",
+        error.response?.data ||
+        error.message
+      );
+
+      setBanners(DEFAULT_BANNERS);
+
+    } finally {
+
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
+
     fetchBanners();
+
   }, []);
 
+  // AUTO SLIDER
+
   useEffect(() => {
-    if (banners.length === 0) return;
+
+    if (banners.length <= 1) return;
 
     const interval = setInterval(() => {
-      let nextIndex = (currentIndex + 1) % banners.length;
+
+      const nextIndex =
+        (currentIndex + 1) %
+        banners.length;
 
       flatListRef.current?.scrollToIndex({
         index: nextIndex,
@@ -47,139 +115,149 @@ const FreshnessCard = () => {
       });
 
       setCurrentIndex(nextIndex);
+
     }, 3000);
 
     return () => clearInterval(interval);
+
   }, [currentIndex, banners]);
 
-  const fetchBanners = async () => {
-    try {
-      const res = await axios.get("http://YOUR_IP:5000/api/content");
+  // RENDER ITEM
 
-      const activeBanners = res.data.filter(
-        (item) => item.type === "banner" && item.isActive
-      );
+  const renderItem = ({ item }) => {
 
-      // ✅ fallback if empty
-      if (activeBanners.length === 0) {
-        setBanners(DEFAULT_BANNERS);
-      } else {
-        setBanners(activeBanners);
-      }
-    } catch (err) {
-      console.log("Error:", err);
+    // BACKEND IMAGE FIELD
 
-      // ✅ fallback if API fails
-      setBanners(DEFAULT_BANNERS);
-    }
+    const imageSource =
+      item.image
+        ? { uri: item.image }
+        : item.imageUrl
+        ? { uri: item.imageUrl }
+        : item.localImage;
 
-    setLoading(false);
+    return (
+
+      <View style={styles.card}>
+
+        <Image
+          source={imageSource}
+          style={styles.image}
+          resizeMode="cover"
+        />
+
+      </View>
+    );
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <Image
-        source={
-          item.localImage
-            ? item.localImage
-            : { uri: item.imageUrl }
-        }
-        style={styles.image}
-        resizeMode="cover"
-      />
-    </View>
-  );
+  // LOADER
 
   if (loading) {
+
     return (
+
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#38C71C" />
+
+        <ActivityIndicator
+          size="large"
+          color="#38C71C"
+        />
+
       </View>
     );
   }
 
   return (
-  <View style={styles.container}>
-    
-    <FlatList
-  ref={flatListRef}
-  data={banners}
-  horizontal
-  pagingEnabled
-  showsHorizontalScrollIndicator={false}
-  keyExtractor={(item, index) => item.id || index.toString()}
-  renderItem={renderItem}
-  style={{ backgroundColor: "transparent" }}
-  contentContainerStyle={{ paddingHorizontal: 8 }}
-  onMomentumScrollEnd={(e) => {
-    const index = Math.round(
-      e.nativeEvent.contentOffset.x / width
-    );
-    setCurrentIndex(index);
-  }}
-/>
 
-    {/* dots */}
-    <View style={styles.dotsContainer}>
-      {banners.map((_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.dot,
-            currentIndex === index && styles.activeDot,
-          ]}
-        />
-      ))}
+    <View style={styles.container}>
+
+      <FlatList
+        ref={flatListRef}
+        data={banners}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item, index) =>
+          item._id
+            ? item._id.toString()
+            : index.toString()
+        }
+        renderItem={renderItem}
+        onMomentumScrollEnd={(e) => {
+
+          const index = Math.round(
+            e.nativeEvent.contentOffset.x /
+            width
+          );
+
+          setCurrentIndex(index);
+        }}
+      />
+
+      {/* DOTS */}
+
+      <View style={styles.dotsContainer}>
+
+        {banners.map((_, index) => (
+
+          <View
+            key={index}
+            style={[
+              styles.dot,
+              currentIndex === index &&
+                styles.activeDot,
+            ]}
+          />
+
+        ))}
+
+      </View>
+
     </View>
-
-  </View>
-);
+  );
 };
 
 export default FreshnessCard;
 
 const styles = StyleSheet.create({
+
   loader: {
     height: 220,
     justifyContent: "center",
     alignItems: "center",
   },
 
-  // 🔥 outer container (adds spacing like pro apps)
   container: {
     marginTop: 10,
   },
 
-  // 🔥 card styling
   card: {
     width: width,
     paddingHorizontal: 12,
   },
 
-  // 🔥 image styling (MAIN FIX)
   image: {
     width: "100%",
-    height: width * 0.5,   // ✅ perfect professional ratio
-    borderRadius: 18,      // ✅ smooth rounded corners
+    height: width * 0.5,
+    borderRadius: 18,
   },
 
   dotsContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 6,
+    marginTop: 8,
   },
 
   dot: {
-    width: 2,
-    height: 2,
-    borderRadius: 3,
-    backgroundColor: "#0a0101",
-    marginHorizontal: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#999",
+    marginHorizontal: 4,
   },
 
   activeDot: {
     backgroundColor: "#38C71C",
-    width: 8,
-    height: 8,
+    width: 10,
+    height: 10,
   },
 });

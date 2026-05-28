@@ -1,223 +1,8 @@
-// import React from 'react';
-// import {
-//   View,
-//   Text,
-//   FlatList,
-//   Image,
-//   StyleSheet,
-//   Dimensions,
-// } from 'react-native';
-// import Icon from 'react-native-vector-icons/FontAwesome';
+import React, {
+  useEffect,
+  useState
+} from 'react';
 
-// // Dummy Delivered Orders (unchanged)
-// const deliveredOrders = [
-//   {
-//     id: '2',
-//     name: 'Onion',
-//     weight: '2Kg',
-//     price: 200,
-//     payment: 'Cash On Delivery',
-//     status: 'Delivered',
-//     image: require('../assets/onion.jpeg'),
-//   },
-//   {
-//     id: '3',
-//     name: 'Potato',
-//     weight: '2Kg',
-//     price: 50,
-//     payment: 'UPI',
-//     status: 'Delivered',
-//     image: require('../assets/potato.jpeg'),
-//   },
-//   {
-//     id: '4',
-//     name: 'Onion',
-//     weight: '2Kg',
-//     price: 200,
-//     payment: 'Cash On Delivery',
-//     status: 'Delivered',
-//     image: require('../assets/onion.jpeg'),
-//   },
-// ];
-
-// const screenWidth = Dimensions.get('window').width;
-
-// const OrderScreen = ({ route }) => {
-//   // Receive orderItems passed from Cart screen or default to empty array
-//   const orderItems = route?.params?.orderItems || [];
-
-//   // Transform orderItems to expected data shape for rendering
-//   const currentOrders = orderItems.map((item, index) => ({
-//     id: item.name + index.toString(), // unique id
-//     name: item.name,
-//     weight: item.quantity + ' Kg', // showing quantity as weight
-//     price: item.pricePerKg * item.quantity,
-//     payment: 'Pending Payment', // you can update later
-//     status: 'Packed', // new orders could be 'Packed'
-//     image: item.image,
-//   }));
-
-//   const renderOrderItem = ({ item }) => (
-//     <View style={styles.orderCard}>
-//       <Image
-//         source={typeof item.image === 'string' ? { uri: item.image } : item.image}
-//         style={styles.orderImage}
-//       />
-//       <View style={styles.orderInfo}>
-//         <Text style={styles.orderName}>
-//           {item.name}{' '}
-//           <Text style={styles.orderWeight}>{item.weight}</Text>
-//         </Text>
-//         <Text style={styles.orderPrice}>
-//           Order Value <Text style={{ color: 'green' }}>Rs.{item.price}</Text>
-//         </Text>
-//         <Text style={styles.orderPayment}>{item.payment}</Text>
-//         <Text style={styles.orderStatus}>
-//           Status{' '}
-//           <Text
-//             style={
-//               item.status === 'Delivered'
-//                 ? styles.statusDelivered
-//                 : styles.statusPacked
-//             }
-//           >
-//             {item.status}
-//           </Text>
-//         </Text>
-//       </View>
-//     </View>
-//   );
-
-//   return (
-//     <View style={styles.container}>
-//       {/* Header */}
-//       <View style={styles.headerContainer}>
-//         <View style={styles.header}>
-//           <Text style={styles.headerTitle}>Orders</Text>
-//         </View>
-//       </View>
-
-//       {/* Current Orders */}
-//       <Text style={styles.sectionTitle}>Current Orders</Text>
-//       {currentOrders.length === 0 ? (
-//         <View style={styles.noOrdersContainer}>
-//           <Icon name="box" size={50} color="gray" />
-//           <Text style={styles.noOrdersText}>No Current Orders</Text>
-//         </View>
-//       ) : (
-//         <FlatList
-//           data={currentOrders}
-//           renderItem={renderOrderItem}
-//           keyExtractor={(item) => item.id}
-//         />
-//       )}
-
-//       {/* Delivered Orders */}
-//       <Text style={styles.sectionTitle}>Delivered Orders</Text>
-//       <FlatList
-//         data={deliveredOrders}
-//         renderItem={renderOrderItem}
-//         keyExtractor={(item) => item.id}
-//       />
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: '#D1F5C7',
-//     paddingHorizontal: 15,
-//   },
-//   headerContainer: {
-//     backgroundColor: '#25BB00',
-//     marginHorizontal: -15, // Stretch beyond padding
-//     paddingHorizontal: 15,
-//     paddingVertical: 15,
-//   },
-//   header: {
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   headerTitle: {
-//     fontSize: 22,
-//     fontWeight: 'bold',
-//     color: 'white',
-//     textAlign: 'center',
-//   },
-//   sectionTitle: {
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//     marginTop: 15,
-//     marginBottom: 8,
-//     color: '#000',
-//   },
-//   orderCard: {
-//     backgroundColor: 'white',
-//     borderRadius: 15,
-//     padding: 12,
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     marginBottom: 12,
-//     shadowColor: '#000',
-//     shadowOpacity: 0.05,
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowRadius: 4,
-//     elevation: 2,
-//   },
-//   orderImage: {
-//     width: 50,
-//     height: 50,
-//     borderRadius: 8,
-//     marginRight: 12,
-//   },
-//   orderInfo: {
-//     flex: 1,
-//   },
-//   orderName: {
-//     fontSize: 16,
-//     fontWeight: '600',
-//   },
-//   orderWeight: {
-//     fontSize: 15,
-//     fontWeight: 'bold',
-//     color: 'green',
-//   },
-//   orderPrice: {
-//     fontSize: 14,
-//     marginTop: 3,
-//   },
-//   orderPayment: {
-//     fontSize: 14,
-//     color: '#555',
-//     marginTop: 2,
-//   },
-//   orderStatus: {
-//     fontSize: 14,
-//     marginTop: 5,
-//   },
-//   statusDelivered: {
-//     fontWeight: 'bold',
-//     color: 'green',
-//   },
-//   statusPacked: {
-//     fontWeight: 'bold',
-//     color: 'orange',
-//   },
-//   noOrdersContainer: {
-//     alignItems: 'center',
-//     marginTop: 40,
-//     marginBottom: 20,
-//   },
-//   noOrdersText: {
-//     fontSize: 17,
-//     color: 'gray',
-//     marginTop: 10,
-//   },
-// });
-
-// export default OrderScreen;
-import React from 'react';
 import {
   View,
   Text,
@@ -225,130 +10,224 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-// Dummy Delivered Orders
-const deliveredOrders = [
-  {
-    id: '2',
-    name: 'Onion',
-    weight: '2Kg',
-    price: 200,
-    payment: 'Cash On Delivery',
-    status: 'Delivered',
-    image: require('../assets/onion.jpeg'),
-  },
-  {
-    id: '3',
-    name: 'Potato',
-    weight: '2Kg',
-    price: 50,
-    payment: 'UPI',
-    status: 'Delivered',
-    image: require('../assets/potato.jpeg'),
-  },
-  {
-    id: '4',
-    name: 'Onion',
-    weight: '2Kg',
-    price: 200,
-    payment: 'Cash On Delivery',
-    status: 'Delivered',
-    image: require('../assets/onion.jpeg'),
-  },
-];
+import Icon from 'react-native-vector-icons/FontAwesome';
 
-const OrderScreen = ({ route, navigation }) => {
-  const orderItems = route?.params?.orderItems || [];
+import { getOrders } from '../api/orderApi';
 
-  const currentOrders = orderItems.map((item, index) => ({
-    id: item.name + index.toString(),
-    name: item.name,
-    weight: item.quantity + ' Kg',
-    price: item.pricePerKg * item.quantity,
-    payment: 'Pending Payment',
-    status: 'Packed',
-    image: item.image,
-  }));
+const OrderScreen = ({
+  navigation
+}) => {
 
-  const renderOrderItem = ({ item }) => (
-    <View style={styles.orderCard}>
-      <Image
-        source={typeof item.image === 'string' ? { uri: item.image } : item.image}
-        style={styles.orderImage}
-      />
+  const [orders, setOrders] =
+    useState([]);
 
-      <View style={styles.orderInfo}>
-        <Text style={styles.orderName}>
-          {item.name}{' '}
-          <Text style={styles.orderWeight}>{item.weight}</Text>
-        </Text>
+  const [loading, setLoading] =
+    useState(true);
 
-        <Text style={styles.orderPrice}>
-          Order Value <Text style={{ color: 'green' }}>Rs.{item.price}</Text>
-        </Text>
+  // FETCH ORDERS
 
-        <Text style={styles.orderPayment}>{item.payment}</Text>
+  const fetchOrders = async () => {
 
-        <Text style={styles.orderStatus}>
-          Status{' '}
-          <Text
-            style={
-              item.status === 'Delivered'
-                ? styles.statusDelivered
-                : styles.statusPacked
-            }
-          >
-            {item.status}
-          </Text>
-        </Text>
+    try {
+
+      const response =
+        await getOrders();
+
+      console.log(
+        "ORDERS:",
+        response
+      );
+
+      setOrders(response);
+
+    } catch (error) {
+
+      console.log(
+        "FETCH ORDER ERROR:",
+        error.response?.data ||
+        error.message
+      );
+
+    } finally {
+
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+
+    fetchOrders();
+
+  }, []);
+
+  // LOADING
+
+  if (loading) {
+
+    return (
+
+      <View style={styles.loaderContainer}>
+
+        <ActivityIndicator
+          size="large"
+          color="#25BB00"
+        />
+
       </View>
-    </View>
-  );
+    );
+  }
+
+  // RENDER ORDER ITEM
+
+  const renderOrder = ({
+    item
+  }) => {
+
+    const firstItem =
+      item.items?.[0];
+
+    const name =
+      firstItem?.productName ||
+      "Product";
+
+    const quantity =
+      firstItem?.quantity || 1;
+
+    return (
+
+      <View style={styles.card}>
+
+        {/* IMAGE */}
+
+        <Image
+          source={require('../assets/potato.jpeg')}
+          style={styles.image}
+        />
+
+        {/* INFO */}
+
+        <View style={styles.info}>
+
+          <Text style={styles.name}>
+            {name}
+          </Text>
+
+          <Text>
+            Quantity:
+            {' '}
+            {quantity}
+            {' '}
+            Kg
+          </Text>
+
+          <Text style={styles.price}>
+            ₹{item.totalAmount}
+          </Text>
+
+          <Text>
+            Payment:
+            {' '}
+            {item.paymentMedium || 'COD'}
+          </Text>
+
+          <Text>
+
+            Status:
+
+            <Text
+              style={
+                item.status === 'delivered'
+                  ? styles.delivered
+                  : styles.packed
+              }
+            >
+
+              {' '}
+              {item.status || 'approved'}
+
+            </Text>
+
+          </Text>
+
+        </View>
+
+      </View>
+    );
+  };
 
   return (
+
     <View style={styles.container}>
 
-      {/* Header */}
-      <View style={styles.headerContainer}>
+      {/* HEADER */}
+
+      <View style={styles.header}>
+
         <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
+          onPress={() =>
+            navigation.goBack()
+          }
         >
-          <Ionicons name="arrow-back" size={28} color="white" />
+
+          <Ionicons
+            name='arrow-back'
+            size={28}
+            color='white'
+          />
+
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Orders</Text>
+        <Text style={styles.headerText}>
+          My Orders
+        </Text>
 
         <View style={{ width: 28 }} />
+
       </View>
 
-      {/* Current Orders */}
-      <Text style={styles.sectionTitle}>Current Orders</Text>
+      {/* EMPTY */}
 
-      {currentOrders.length === 0 ? (
-        <View style={styles.noOrdersContainer}>
-          <Icon name="box" size={50} color="gray" />
-          <Text style={styles.noOrdersText}>No Current Orders</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={currentOrders}
-          renderItem={renderOrderItem}
-          keyExtractor={(item) => item.id}
-        />
-      )}
+      {
+        orders.length === 0 ? (
 
-      {/* Delivered Orders */}
-      <Text style={styles.sectionTitle}>Delivered Orders</Text>
+          <View style={styles.empty}>
 
-      <FlatList
-        data={deliveredOrders}
-        renderItem={renderOrderItem}
-        keyExtractor={(item) => item.id}
-      />
+            <Icon
+              name='box'
+              size={70}
+              color='gray'
+            />
+
+            <Text style={styles.emptyText}>
+              No Orders Found
+            </Text>
+
+          </View>
+
+        ) : (
+
+          <FlatList
+            data={orders}
+            renderItem={renderOrder}
+            keyExtractor={(item, index) =>
+
+              item._id
+                ? item._id.toString()
+                : index.toString()
+            }
+            contentContainerStyle={{
+              padding: 15
+            }}
+          />
+
+        )
+      }
+
     </View>
   );
 };
@@ -356,112 +235,89 @@ const OrderScreen = ({ route, navigation }) => {
 export default OrderScreen;
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
-    backgroundColor: '#D1F5C7',
-    paddingHorizontal: 15,
+    backgroundColor: '#F3FAF1'
   },
 
-  headerContainer: {
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+
+  header: {
     backgroundColor: '#25BB00',
-    marginHorizontal: -15,
+    paddingTop: 20,
+    paddingBottom: 15,
     paddingHorizontal: 15,
-    paddingVertical: 15,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center'
   },
 
-  backBtn: {
-    width: 28,
-  },
-
-  headerTitle: {
+  headerText: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
+    color: 'white'
   },
 
-  sectionTitle: {
+  card: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#DDEFD8'
+  },
+
+  image: {
+    width: 70,
+    height: 70,
+    borderRadius: 10
+  },
+
+  info: {
+    marginLeft: 15,
+    flex: 1
+  },
+
+  name: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 15,
-    marginBottom: 8,
-    color: '#000',
+    color: '#1F2A1F'
   },
 
-  orderCard: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-
-  orderImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-
-  orderInfo: {
-    flex: 1,
-  },
-
-  orderName: {
+  price: {
+    fontWeight: 'bold',
     fontSize: 16,
-    fontWeight: '600',
+    color: '#25BB00',
+    marginTop: 5
   },
 
-  orderWeight: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: 'green',
-  },
-
-  orderPrice: {
-    fontSize: 14,
-    marginTop: 3,
-  },
-
-  orderPayment: {
-    fontSize: 14,
-    color: '#555',
-    marginTop: 2,
-  },
-
-  orderStatus: {
-    fontSize: 14,
-    marginTop: 5,
-  },
-
-  statusDelivered: {
-    fontWeight: 'bold',
-    color: 'green',
-  },
-
-  statusPacked: {
-    fontWeight: 'bold',
+  packed: {
     color: 'orange',
+    fontWeight: 'bold'
   },
 
-  noOrdersContainer: {
-    alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 20,
+  delivered: {
+    color: 'green',
+    fontWeight: 'bold'
   },
 
-  noOrdersText: {
-    fontSize: 17,
-    color: 'gray',
-    marginTop: 10,
+  empty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
+
+  emptyText: {
+    fontSize: 18,
+    marginTop: 15,
+    color: 'gray'
+  }
+
 });

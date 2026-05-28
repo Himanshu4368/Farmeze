@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const FavoritesScreen = ({ navigation, route }) => {
-  const { favourites = [], removeFromFavourites = () => {} } = route.params || {};
+const { favourites = [], removeFromFavourites = () => {} } = route.params || {};
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
@@ -50,67 +49,97 @@ const FavoritesScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgb(200, 230, 200)',
+    backgroundColor: '#F3FAF1',
   },
+
   header: {
-    backgroundColor: 'rgb(37, 187, 0)',
+    backgroundColor: '#25BB00',
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 16,
-    flexDirection: 'row',
+    position: 'relative',
+    justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
+
   backButton: {
-    paddingRight: 10,
+    position: 'absolute',
+    left: 16,
+    top: 50,
+    padding: 6,
+    zIndex: 10,
   },
+
   headerTitle: {
     fontSize: 20,
     color: 'white',
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
+
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   emptyText: {
     fontSize: 16,
-    color: '#888',
+    color: '#777',
+    textAlign: 'center',
+    paddingHorizontal: 24,
   },
+
   card: {
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: 14,
+    marginHorizontal: 12,
     overflow: 'hidden',
-    elevation: 3,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#DDEFD8',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
+
   image: {
-    width: 100,
-    height: 100,
+    width: 110,
+    height: 110,
   },
+
   cardContent: {
     flex: 1,
     padding: 12,
     justifyContent: 'space-between',
   },
+
   itemName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#222',
   },
+
   removeBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: '#f44336',
+    backgroundColor: '#E53935',
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderRadius: 8,
   },
+
   removeText: {
     color: 'white',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
 

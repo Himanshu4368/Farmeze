@@ -1,4 +1,5 @@
 import React from "react";
+
 import {
   View,
   Text,
@@ -7,11 +8,14 @@ import {
   Image,
   TouchableOpacity,
 } from "react-native";
+
 import Icon from "react-native-vector-icons/MaterialIcons";
+
 import * as Animatable from "react-native-animatable";
+
 import { useCart } from "../../screen/Homescreen/CartContext";
 
-const Popular = ({ navigation }) => {
+const Popular = ({ navigation, products = [] }) => {
 
   const {
     cart,
@@ -19,33 +23,10 @@ const Popular = ({ navigation }) => {
     updateQuantity,
   } = useCart();
 
-  const popularItems = [
-    {
-      id: 1,
-      name: "Potato",
-      price: "Rs.30/Kg",
-      pricePerKg: 30,
-      discount: "10% OFF",
-      image: require("../../assets/potato.jpeg"),
-      description:
-        "Fresh farm potatoes directly sourced from local farmers.",
-      rating: 5,
-    },
-    {
-      id: 2,
-      name: "Onion",
-      price: "Rs.100/Kg",
-      pricePerKg: 100,
-      discount: "10% OFF",
-      image: require("../../assets/onion.jpeg"),
-      description:
-        "Premium quality onions with best freshness and taste.",
-      rating: 4.5,
-    },
-  ];
-
   // GET ITEM QUANTITY
+
   const getQuantity = (itemId) => {
+
     const cartItem = cart.find(
       (item) => item.id === itemId
     );
@@ -54,215 +35,242 @@ const Popular = ({ navigation }) => {
   };
 
   // ADD ITEM
+
   const handleAdd = (item) => {
+    const itemId = item?._id || item?.id;
 
     const existingItem = cart.find(
-      (cartItem) => cartItem.id === item.id
+      (cartItem) => cartItem.id === itemId
     );
 
     if (existingItem) {
 
       updateQuantity(
-        item.id,
+        itemId,
         existingItem.quantity + 1
       );
 
     } else {
 
       addToCart({
-        ...item,
+        id: itemId,
+        name: item?.name,
+        image: item?.imageUrl,
+        pricePerKg: item?.price,
         quantity: 1,
       });
-
     }
   };
 
-  // INCREASE QUANTITY
+  // INCREASE
+
   const increaseQty = (item, quantity) => {
 
     updateQuantity(
-      item.id,
+      item?._id || item?.id,
       quantity + 1
     );
   };
 
-  // DECREASE QUANTITY
+  // DECREASE
+
   const decreaseQty = (item, quantity) => {
 
     updateQuantity(
-      item.id,
+      item?._id || item?.id,
       quantity - 1
     );
   };
 
   return (
+
     <View style={styles.container}>
 
       {/* HEADER */}
+
       <View style={styles.headerRow}>
 
         <Text style={styles.title}>
           Popular
         </Text>
 
-        <TouchableOpacity>
-          <Text style={styles.seeAll}>
-            See All
-          </Text>
-        </TouchableOpacity>
-
       </View>
 
       {/* PRODUCTS */}
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
       >
 
-        {popularItems.map((item, index) => {
+        {
+          products.map((item, index) => {
 
-          const quantity = getQuantity(item.id);
+            const quantity =
+              getQuantity(item?._id || item?.id);
 
-          return (
+            return (
 
-            <Animatable.View
-              key={index}
-              animation="fadeInUp"
-              duration={700}
-            >
-
-              {/* CARD */}
-              <TouchableOpacity
-                activeOpacity={0.9}
-                style={styles.card}
-                onPress={() =>
-                  navigation.navigate(
-                    "ProductDescription",
-                    {
-                      vegetable: {
-                        id: item.id,
-                        name: item.name,
-                        price: item.price,
-                        image: item.image,
-                        type: "Fresh Vegetable",
-                        description: item.description,
-                        pricePerKg: item.pricePerKg,
-                        rating: item.rating,
-                      },
-                    }
-                  )
-                }
+              <Animatable.View
+                key={item?._id || index}
+                animation="fadeInUp"
+                duration={700}
               >
 
-                {/* DISCOUNT BADGE */}
-                <View style={styles.discountBadge}>
-                  <Text style={styles.discountText}>
-                    {item.discount}
-                  </Text>
-                </View>
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  style={styles.card}
+                  onPress={() =>
+                    navigation.navigate(
+                      "ProductDescription",
+                      {
+                        vegetable: {
+                          id: item?._id,
+                          name: item?.name,
+                          image: item?.imageUrl,
+                          price:
+                            `Rs.${item?.price || 0}/Kg`,
+                          pricePerKg: item?.price,
+                          description:
+                            item?.description,
+                          rating:
+                            item?.rating || 4.5,
+                        },
+                      }
+                    )
+                  }
+                >
 
-                {/* PRODUCT IMAGE */}
-                <Image
-                  source={item.image}
-                  style={styles.image}
-                />
+                  {/* PRODUCT IMAGE */}
 
-                {/* DETAILS */}
-                <View style={styles.details}>
+                  <Image
+                    source={
+                      item?.imageUrl
+                        ? { uri: item.imageUrl }
+                        : require("../../assets/potato.jpeg")
+                    }
+                    style={styles.image}
+                  />
 
-                  <Text style={styles.name}>
-                    {item.name}
-                  </Text>
+                  {/* DETAILS */}
 
-                  <Text style={styles.price}>
-                    {item.price}
-                  </Text>
+                  <View style={styles.details}>
 
-                  {/* RATING */}
-                  <View style={styles.ratingContainer}>
-
-                    <Icon
-                      name="star"
-                      size={15}
-                      color="#FFC107"
-                    />
-
-                    <Text style={styles.ratingText}>
-                      {item.rating}
+                    <Text style={styles.name}>
+                      {item?.name || "Vegetable"}
                     </Text>
+
+                    <Text style={styles.price}>
+                      ₹{item?.price || 0}/Kg
+                    </Text>
+
+                    {/* RATING */}
+
+                    <View style={styles.ratingContainer}>
+
+                      <Icon
+                        name="star"
+                        size={15}
+                        color="#FFC107"
+                      />
+
+                      <Text style={styles.ratingText}>
+                        {item?.rating || 4.5}
+                      </Text>
+
+                    </View>
 
                   </View>
 
-                </View>
+                  {/* ADD BUTTON */}
 
-                {/* ADD BUTTON */}
-                {quantity === 0 ? (
+                  {
+                    quantity === 0 ? (
 
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    style={styles.addButton}
-                    onPress={() => handleAdd(item)}
-                  >
+                      <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() =>
+                          handleAdd(item)
+                        }
+                      >
 
-                    <Icon
-                      name="add"
-                      size={24}
-                      color="#fff"
-                    />
+                        <Icon
+                          name="add"
+                          size={24}
+                          color="#fff"
+                        />
 
-                  </TouchableOpacity>
+                      </TouchableOpacity>
 
-                ) : (
+                    ) : (
 
-                  /* QUANTITY CONTROLS */
-                  <View style={styles.quantityContainer}>
+                      <View
+                        style={
+                          styles.quantityContainer
+                        }
+                      >
 
-                    {/* MINUS */}
-                    <TouchableOpacity
-                      style={styles.qtyBtn}
-                      onPress={() =>
-                        decreaseQty(item, quantity)
-                      }
-                    >
+                        {/* MINUS */}
 
-                      <Icon
-                        name="remove"
-                        size={18}
-                        color="#fff"
-                      />
+                        <TouchableOpacity
+                          style={styles.qtyBtn}
+                          onPress={() =>
+                            decreaseQty(
+                              item,
+                              quantity
+                            )
+                          }
+                        >
 
-                    </TouchableOpacity>
+                          <Icon
+                            name="remove"
+                            size={18}
+                            color="#fff"
+                          />
 
-                    {/* QUANTITY */}
-                    <Text style={styles.quantityText}>
-                      {quantity}
-                    </Text>
+                        </TouchableOpacity>
 
-                    {/* PLUS */}
-                    <TouchableOpacity
-                      style={styles.qtyBtn}
-                      onPress={() =>
-                        increaseQty(item, quantity)
-                      }
-                    >
+                        {/* QUANTITY */}
 
-                      <Icon
-                        name="add"
-                        size={18}
-                        color="#fff"
-                      />
+                        <Text
+                          style={
+                            styles.quantityText
+                          }
+                        >
+                          {quantity}
+                        </Text>
 
-                    </TouchableOpacity>
+                        {/* PLUS */}
 
-                  </View>
+                        <TouchableOpacity
+                          style={styles.qtyBtn}
+                          onPress={() =>
+                            increaseQty(
+                              item,
+                              quantity
+                            )
+                          }
+                        >
 
-                )}
+                          <Icon
+                            name="add"
+                            size={18}
+                            color="#fff"
+                          />
 
-              </TouchableOpacity>
+                        </TouchableOpacity>
 
-            </Animatable.View>
-          );
-        })}
+                      </View>
+
+                    )
+                  }
+
+                </TouchableOpacity>
+
+              </Animatable.View>
+            );
+          })
+        }
 
       </ScrollView>
 
@@ -275,91 +283,49 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 18,
     paddingLeft: 18,
-    backgroundColor: "#F5FFF1",
   },
 
-  /* HEADER */
-
   headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingRight: 18,
     marginBottom: 16,
   },
 
   title: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: "800",
-    color: "#1B5E20",
-    letterSpacing: 0.5,
+    color: "#1F2A1F",
   },
-
-  seeAll: {
-    fontSize: 14,
-    color: "#38C71C",
-    fontWeight: "700",
-  },
-
-  /* CARD */
 
   card: {
     width: 185,
-    backgroundColor: "#fff",
-    borderRadius: 22,
+
+    backgroundColor: "#FFFFFF",
+
+    borderRadius: 12,
+
     marginRight: 16,
 
     paddingTop: 14,
     paddingBottom: 18,
     paddingHorizontal: 14,
 
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DDEFD8",
 
-    elevation: 5,
-
-    position: "relative",
+    elevation: 3,
   },
-
-  /* DISCOUNT */
-
-  discountBadge: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-
-    backgroundColor: "#FF4D4F",
-
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-
-    borderRadius: 14,
-
-    zIndex: 2,
-  },
-
-  discountText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-
-  /* IMAGE */
 
   image: {
     width: 130,
     height: 120,
-    alignSelf: "center",
-    resizeMode: "contain",
-    marginTop: 10,
-  },
 
-  /* DETAILS */
+    alignSelf: "center",
+
+    resizeMode: "contain",
+
+    marginTop: 10,
+
+    borderRadius: 10,
+  },
 
   details: {
     marginTop: 12,
@@ -386,12 +352,10 @@ const styles = StyleSheet.create({
 
   ratingText: {
     marginLeft: 5,
-    color: "#666",
+    color: "#0f0909",
     fontWeight: "600",
     fontSize: 13,
   },
-
-  /* ADD BUTTON */
 
   addButton: {
     position: "absolute",
@@ -400,25 +364,14 @@ const styles = StyleSheet.create({
 
     width: 42,
     height: 42,
+
     borderRadius: 21,
 
-    backgroundColor: "#38C71C",
+    backgroundColor: "#25BB00",
 
     justifyContent: "center",
     alignItems: "center",
-
-    elevation: 4,
-
-    shadowColor: "#38C71C",
-    shadowOpacity: 0.3,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowRadius: 4,
   },
-
-  /* QUANTITY CONTROLS */
 
   quantityContainer: {
     position: "absolute",
@@ -428,39 +381,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
 
-    backgroundColor: "#38C71C",
+    backgroundColor: "#25BB00",
 
     borderRadius: 30,
 
     paddingHorizontal: 8,
     paddingVertical: 6,
-
-    elevation: 4,
-
-    shadowColor: "#38C71C",
-    shadowOpacity: 0.25,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowRadius: 4,
   },
 
   qtyBtn: {
     width: 28,
     height: 28,
+
     borderRadius: 14,
 
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor:
+      "rgba(255,255,255,0.2)",
 
     justifyContent: "center",
     alignItems: "center",
   },
 
   quantityText: {
-    color: "#fff",
-    fontWeight: "800",
+    color: "#080000",
+
+    fontWeight: "700",
+
     fontSize: 15,
+
     marginHorizontal: 14,
   },
 

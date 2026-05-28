@@ -44,35 +44,41 @@ const Categories = () => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 6,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     marginBottom: 15,
-    color: '#333',
+    color: '#1F2A1F',
   },
   scrollView: {
     flexDirection: 'row',
   },
   categoryItem: {
     alignItems: 'center',
-    marginRight: 20,
+    marginRight: 14,
+    width: 92,
   },
   iconContainer: {
-    width: 87,
-    height: 87,
-    borderRadius: 60,
-    backgroundColor: '#00C400',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#25BB00',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 6,
-    borderColor: 'white',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    elevation: 2,
   },
   categoryText: {
-    marginTop: 5,
-    fontSize: 16,
-    color: '#333',
+    marginTop: 7,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1F2A1F',
+    textAlign: 'center',
   },
 });
 

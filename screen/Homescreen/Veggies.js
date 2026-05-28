@@ -1,35 +1,80 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { getProducts } from '../../api/productApi';
+import { useCart } from './CartContext';
 
-const veggiesData = [
-  { id: '1', name: 'Potato', type: 'Sugar Free', price: 'Rs.30/Kg', image: require('../../assets/potato.jpeg'), tag: 'SUGAR-FREE' },
-  { id: '2', name: 'Onion', type: '', price: 'Rs.100/Kg', image: require('../../assets/onion.jpeg') },
-  { id: '3', name: 'Potato', type: 'Normal Sugar', price: 'Rs.20/Kg', image: require('../../assets/potato.jpeg') },
-  { id: '4', name: 'Potato', type: 'Sugar Free - Red', price: 'Rs.30/Kg', image: require('../../assets/potato.jpeg'), tag: 'SUGAR-FREE' },
-  { id: '5', name: 'Potato', type: 'Normal Sugar - Red', price: 'Rs.40/Kg', image: require('../../assets/potato.jpeg') },
-  { id: '6', name: 'Potato', type: 'Farmeze Round', price: 'Rs.35/Kg', image: require('../../assets/potato.jpeg') }
-];
+const isVegetableProduct = (item) =>
+  item?.category?.toLowerCase().startsWith('veg');
 
 const Veggies = ({ navigation, route }) => {
   const query = route?.params?.query?.toLowerCase() || '';
-  const [filteredData, setFilteredData] = useState(veggiesData);
+  const { addToCart } = useCart();
+  const [veggiesData, setVeggiesData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadVeggies = async () => {
+      try {
+        const data = await getProducts();
+        const products = Array.isArray(data)
+          ? data.filter(isVegetableProduct)
+          : [];
+        setVeggiesData(products);
+        setFilteredData(products);
+      } catch (error) {
+        console.log('Failed to load vegetables', error);
+        setVeggiesData([]);
+        setFilteredData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadVeggies();
+  }, []);
 
   useEffect(() => {
     if (query) {
       const filtered = veggiesData.filter(item =>
-        item.name.toLowerCase().includes(query) ||
-        item.type.toLowerCase().includes(query) ||
-        (item.tag && item.tag.toLowerCase().includes(query))
+        item.name?.toLowerCase().includes(query) ||
+        item.category?.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query) ||
+        item.tags?.some(tag => tag.toLowerCase().includes(query))
       );
       setFilteredData(filtered);
     } else {
       setFilteredData(veggiesData);
     }
-  }, [query]);
+  }, [query, veggiesData]);
 
   const handleNavigateToProduct = (item) => {
-    navigation.navigate('ProductDescription', { vegetable: item });
+    navigation.navigate('ProductDescription', {
+      vegetable: {
+        _id: item._id,
+        id: item._id,
+        name: item.name,
+        image: item.imageUrl,
+        price: `Rs.${item.price || 0}/Kg`,
+        pricePerKg: item.price,
+        description: item.description,
+      },
+    });
+  };
+
+  const handleAddToCart = (item) => {
+    addToCart({
+      id: item._id || item.id,
+      name: item.name,
+      image: item.imageUrl,
+      pricePerKg: item.price,
+      quantity: 1,
+    });
+
+    navigation.navigate('MainTabs', {
+      screen: 'Cart',
+    });
   };
 
   return (
@@ -49,24 +94,65 @@ const Veggies = ({ navigation, route }) => {
       ) : null}
 
       {/* Grid View */}
-      {filteredData.length > 0 ? (
+      {loading ? (
+        <Text style={styles.noResults}>Loading vegetables...</Text>
+      ) : filteredData.length > 0 ? (
         <FlatList
           data={filteredData}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item._id || item.id}
           numColumns={2}
+          contentContainerStyle={styles.listContent}
+          columnWrapperStyle={styles.row}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleNavigateToProduct(item)} style={styles.card}>
-              <Image source={item.image} style={styles.image} />
-              {item.tag && <Text style={styles.tag}>{item.tag}</Text>}
-              <Text style={styles.name}>{item.name}</Text>
-              {item.type ? <Text style={styles.type}>({item.type})</Text> : null}
-              <Text style={styles.price}>{item.price}</Text>
-              <Text style={styles.discount}>10% OFF</Text>
-            </TouchableOpacity>
+            <View style={styles.card}>
+              <TouchableOpacity
+                activeOpacity={0.88}
+                onPress={() => handleNavigateToProduct(item)}
+              >
+                <View style={styles.imageWrap}>
+                  <Image
+                    source={
+                      item.imageUrl
+                        ? { uri: item.imageUrl }
+                        : require('../../assets/potato.jpeg')
+                    }
+                    style={styles.image}
+                  />
+                </View>
+
+                <View style={styles.cardBody}>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {item.name || 'Vegetable'}
+                  </Text>
+
+                  <Text style={styles.type} numberOfLines={2}>
+                    {item.description || item.category || 'Fresh farm produce'}
+                  </Text>
+
+                  <View style={styles.footerRow}>
+                    <Text style={styles.price}>Rs.{item.price || 0}/Kg</Text>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>Fresh</Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.9}
+                style={styles.addButton}
+                onPress={() => handleAddToCart(item)}
+              >
+                <Icon name="shopping-cart" size={16} color="#fff" />
+                <Text style={styles.addButtonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
           )}
         />
       ) : (
-        <Text style={styles.noResults}>No vegetables found for "{query}"</Text>
+        <Text style={styles.noResults}>
+          {query ? `No vegetables found for "${query}"` : 'No vegetables found'}
+        </Text>
       )}
     </View>
   );
@@ -75,7 +161,7 @@ const Veggies = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgb(200, 230, 200)',
+    backgroundColor: '#F3FAF1',
   },
   header: {
     flexDirection: 'row',
@@ -86,30 +172,105 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   headerTitle: { fontSize: 20, color: '#fff', fontWeight: 'bold' },
+  listContent: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 28,
+  },
+  row: {
+    gap: 12,
+  },
   card: {
     flex: 1,
-    margin: 8,
+    minHeight: 266,
+    marginBottom: 14,
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#DCEED8',
+    elevation: 3
+  },
+  imageWrap: {
+    height: 122,
+    backgroundColor: '#F4FFF0',
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 10,
-    elevation: 5
+    padding: 12,
   },
-  image: { width: 80, height: 80, resizeMode: 'contain' },
-  tag: {
-    backgroundColor: '#4CAF50',
-    color: '#fff',
+  image: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  cardBody: {
+    padding: 12,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2A1F',
+    textAlign: 'left',
+    marginBottom: 5,
+  },
+  type: {
+    minHeight: 34,
     fontSize: 12,
-    paddingHorizontal: 8,
-    borderRadius: 5,
-    marginVertical: 5
+    lineHeight: 17,
+    color: '#687368',
+    textAlign: 'left',
   },
-  name: { fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
-  type: { fontSize: 12, color: '#666', textAlign: 'center' },
-  price: { fontSize: 14, fontWeight: 'bold', marginVertical: 5 },
-  discount: { fontSize: 12, color: '#4CAF50', fontWeight: 'bold' },
-  resultText: { textAlign: 'center', fontSize: 14, marginBottom: 5, color: '#333' },
-  noResults: { textAlign: 'center', fontSize: 16, color: 'red', marginTop: 30 }
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  price: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#2E7D32',
+  },
+  badge: {
+    backgroundColor: '#E7F6E2',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  badgeText: {
+    color: '#2E7D32',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  addButton: {
+    marginHorizontal: 12,
+    marginBottom: 12,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: '#25BB00',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  resultText: {
+    textAlign: 'center',
+    fontSize: 14,
+    marginTop: 10,
+    marginBottom: 2,
+    color: '#333',
+  },
+  noResults: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#2E7D32',
+    marginTop: 34,
+  }
 });
 
 export default Veggies;

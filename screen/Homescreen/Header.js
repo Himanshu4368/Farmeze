@@ -205,7 +205,7 @@
 // });
 
 // export default Header;
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -214,24 +214,56 @@ import {
   StyleSheet,
   PermissionsAndroid,
   Platform,
+  InteractionManager,
   Alert,
 } from 'react-native';
-import Geolocation from '@react-native-community/geolocation';
+import CommunityGeolocation from '@react-native-community/geolocation';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { getProducts } from '../../api/productApi';
+
+const OPENCAGE_API_KEY = '9277e0c924ad4bc6865b76b8f9b88b34';
+
+const formatAddressParts = (...parts) =>
+  parts
+    .filter(Boolean)
+    .map((part) => String(part).trim())
+    .filter(Boolean)
+    .join(', ');
+
+const isVegetableProduct = (item) =>
+  item?.category?.toLowerCase().startsWith('veg');
+
+const normalizeSearchText = (value) =>
+  String(value || '').trim().toLowerCase();
+
+const toProductDescriptionParam = (item) => ({
+  _id: item?._id,
+  id: item?._id || item?.id,
+  name: item?.name,
+  image: item?.imageUrl,
+  price: `Rs.${item?.price || 0}/Kg`,
+  pricePerKg: item?.price,
+  description: item?.description,
+  rating: item?.rating || 4.5,
+});
 
 const Header = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
-  const [locationText, setLocationText] = useState('Fetching location...');
+  const [locationText, setLocationText] = useState('Tap to fetch location');
+  const [isSearching, setIsSearching] = useState(false);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    getLocation();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   // 🔑 Ask Location Permission
   const requestPermission = async () => {
     if (Platform.OS !== 'android') return true;
 
-    const granted = await PermissionsAndroid.request(
+    const fineLocation = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
       {
         title: 'Location Permission',
@@ -241,67 +273,204 @@ const Header = ({ navigation }) => {
       }
     );
 
-    return granted === PermissionsAndroid.RESULTS.GRANTED;
+    if (fineLocation === PermissionsAndroid.RESULTS.GRANTED) {
+      return true;
+    }
+
+    const coarseLocation = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+      {
+        title: 'Approximate Location Permission',
+        message: 'Farmeze can use approximate location if GPS is unavailable.',
+        buttonPositive: 'OK',
+        buttonNegative: 'Cancel',
+      }
+    );
+
+    return coarseLocation === PermissionsAndroid.RESULTS.GRANTED;
   };
 
   // 📍 Fetch Live Location
-  const getLocation = async () => {
-    const hasPermission = await requestPermission();
-  
-    if (!hasPermission) {
-      setLocationText('Permission denied');
+  const getCurrentPosition = () =>
+    new Promise((resolve, reject) => {
+      CommunityGeolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: false,
+        timeout: 12000,
+        maximumAge: 10 * 60 * 1000,
+      });
+    });
+
+  const setSafeLocationText = useCallback((text) => {
+    if (isMountedRef.current) {
+      setLocationText(text);
+    }
+  }, []);
+
+  const reverseGeocodeWithOpenCage = useCallback(async (latitude, longitude) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const query = `${latitude},${longitude}`;
+    const url =
+      `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(query)}` +
+      `&key=${OPENCAGE_API_KEY}&no_annotations=1`;
+
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+
+      if (!response.ok) {
+        throw new Error(`Reverse geocode failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const components = data.results?.[0]?.components || {};
+
+      const area =
+        components.suburb ||
+        components.neighbourhood ||
+        components.road ||
+        '';
+
+      const city =
+        components.city ||
+        components.town ||
+        components.village ||
+        '';
+
+      const state = components.state || '';
+
+      return formatAddressParts(area, city, state);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }, []);
+
+  const reverseGeocodeWithBigDataCloud = useCallback(async (latitude, longitude) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const url =
+      'https://api.bigdatacloud.net/data/reverse-geocode-client' +
+      `?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
+
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+
+      if (!response.ok) {
+        throw new Error(`Fallback geocode failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      return formatAddressParts(
+        data.locality,
+        data.city,
+        data.principalSubdivision,
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }, []);
+
+  const reverseGeocode = useCallback(async (latitude, longitude) => {
+    try {
+      const openCageAddress = await reverseGeocodeWithOpenCage(
+        latitude,
+        longitude,
+      );
+
+      if (openCageAddress) {
+        return openCageAddress;
+      }
+    } catch (openCageError) {
+      console.log('OpenCage geocode error:', openCageError);
+    }
+
+    return reverseGeocodeWithBigDataCloud(latitude, longitude);
+  }, [reverseGeocodeWithBigDataCloud, reverseGeocodeWithOpenCage]);
+
+  const getLocation = useCallback(async () => {
+    try {
+      setSafeLocationText('Finding location...');
+
+      const hasPermission = await requestPermission();
+
+      if (!hasPermission) {
+        setSafeLocationText('Location permission needed');
+        return;
+      }
+
+      const position = await getCurrentPosition();
+
+      const { latitude, longitude } = position.coords;
+      let finalAddress = '';
+
+      try {
+        finalAddress = await reverseGeocode(latitude, longitude);
+      } catch (geocodeError) {
+        console.log('Reverse geocode error:', geocodeError);
+      }
+
+      setSafeLocationText(
+        finalAddress ||
+          'Tap to retry location'
+      );
+    } catch (error) {
+      console.log('Location error:', error);
+      setSafeLocationText('Tap to retry location');
+    }
+  }, [reverseGeocode, setSafeLocationText]);
+
+  const handleSearch = useCallback(async () => {
+    const query = normalizeSearchText(searchText);
+
+    if (!query || isSearching) {
       return;
     }
 
-    Geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        console.log('Live Coordinates:', latitude, longitude);
+    try {
+      setIsSearching(true);
 
-        try {
-          const apiKey ="Y9277e0c924ad4bc6865b76b8f9b88b34";
-          const response = await fetch(
-            `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${apiKey}`
-          );
-          const data = await response.json();
-          const components = data.results[0]?.components || {};
+      const products = await getProducts();
+      const vegetables = Array.isArray(products)
+        ? products.filter(isVegetableProduct)
+        : [];
 
-          const area =
-            components.suburb ||
-            components.neighbourhood ||
-            components.road ||
-            '';
+      const matchedProduct =
+        vegetables.find(
+          (item) => normalizeSearchText(item?.name) === query,
+        ) ||
+        vegetables.find((item) =>
+          normalizeSearchText(item?.name).includes(query),
+        );
 
-          const city =
-            components.city ||
-            components.town ||
-            components.village ||
-            '';
-
-          const state = components.state || '';
-
-          const finalAddress = [area, city, state]
-            .filter(Boolean)
-            .join(', ');
-
-          setLocationText(finalAddress || 'Location found');
-        } catch (err) {
-          console.log('Geocoding error:', err);
-          setLocationText('Location error');
-        }
-      },
-      (error) => {
-        console.log('GPS Error:', error);
-        Alert.alert('Location Error', error.message);
-        setLocationText('GPS error');
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 30000,
-        maximumAge: 0,
+      if (matchedProduct) {
+        navigation.navigate('ProductDescription', {
+          vegetable: toProductDescriptionParam(matchedProduct),
+        });
+        return;
       }
-    );
-  };
+
+      Alert.alert(
+        'No vegetable found',
+        `No product matched "${searchText.trim()}".`,
+      );
+    } catch (error) {
+      console.log('Search failed:', error);
+      Alert.alert('Search Error', 'Unable to search products right now.');
+    } finally {
+      setIsSearching(false);
+    }
+  }, [isSearching, navigation, searchText]);
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      getLocation();
+    });
+
+    return () => {
+      task.cancel?.();
+    };
+  }, [getLocation]);
 
   return (
     <View style={styles.header}>
@@ -324,7 +493,9 @@ const Header = ({ navigation }) => {
       {/* Location */}
       <TouchableOpacity style={styles.locationBox} onPress={getLocation}>
         <Icon name="map-marker" size={16} color="#fff" />
-        <Text style={styles.locationText}>{locationText}</Text>
+        <Text style={styles.locationText} numberOfLines={1}>
+          {locationText}
+        </Text>
       </TouchableOpacity>
 
       {/* Search */}
@@ -335,11 +506,12 @@ const Header = ({ navigation }) => {
           style={styles.searchInput}
           value={searchText}
           onChangeText={setSearchText}
+          returnKeyType="search"
+          onSubmitEditing={handleSearch}
         />
         <TouchableOpacity
-          onPress={() =>
-            navigation.navigate('VeggieResults', { query: searchText })
-          }
+          onPress={handleSearch}
+          disabled={isSearching}
         >
           <Icon name="search" size={18} color="#666" />
         </TouchableOpacity>
@@ -354,36 +526,41 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#25BB00',
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 22,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
   locationBox: {
     flexDirection: 'row',
-    backgroundColor: '#86DA7E',
+    backgroundColor: '#1F7A35',
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
     alignItems: 'center',
     marginBottom: 12,
+    maxWidth: '78%',
   },
   locationText: {
     color: '#fff',
     marginLeft: 6,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    fontSize: 13,
   },
   searchBox: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 12,
     width: '100%',
     paddingHorizontal: 14,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DDEFD8',
   },
   searchInput: {
     flex: 1,
-    height: 40,
-    color: '#000',
+    height: 44,
+    color: '#1F2A1F',
+    fontSize: 15,
   },
   leftIcon: {
     position: 'absolute',

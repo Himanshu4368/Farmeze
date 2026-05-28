@@ -71,7 +71,7 @@ const AuthScreen = ({navigation, isLogin = true }) => {
     <View style={styles.container}>
      
   <TouchableOpacity style={styles.backIcon}  onPress={() => navigation.goBack()}>
-  <Icon name="arrow-back" size={24} color="white" />
+  <Icon name="arrow-back" size={24} color="#1F7A35" />
 </TouchableOpacity>
 
       <Text style={styles.title}>{isLogin ? 'Login' : 'Signup'}</Text>
@@ -121,10 +121,10 @@ const AuthScreen = ({navigation, isLogin = true }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#25BB00' },
-  title: { fontSize: 28, fontWeight: 'bold', color: 'white', marginBottom: 10 },
-  box: { backgroundColor: 'white', padding: 20, borderRadius: 15, width: '90%', alignItems: 'center', elevation: 5 },
-  input: { width: '100%', height: 50, borderColor: '#ccc', borderWidth: 1, borderRadius: 10, marginBottom: 15, paddingHorizontal: 15, color: 'black' },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3FAF1' },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#1F7A35', marginBottom: 10 },
+  box: { backgroundColor: 'white', padding: 20, borderRadius: 12, width: '90%', alignItems: 'center', elevation: 5, borderWidth: 1, borderColor: '#DDEFD8' },
+  input: { width: '100%', height: 50, borderColor: '#D0D5DD', borderWidth: 1, borderRadius: 10, marginBottom: 15, paddingHorizontal: 15, color: '#1F2A1F' },
   button: { backgroundColor: '#25BB00', padding: 15, borderRadius: 10, width: '100%', alignItems: 'center' },
   buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
   backButton: {
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   zIndex: 1,
 },
 backText: {
-  color: 'white',
+  color: '#1F7A35',
   fontSize: 16,
   fontWeight: 'bold',
 },

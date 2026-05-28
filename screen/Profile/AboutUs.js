@@ -90,12 +90,12 @@ const AboutUs = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         padding: 20,
-        backgroundColor: 'white',
+        backgroundColor: '#F3FAF1',
     },
     title: {
         fontSize: 32,
         fontWeight: '700',
-        color: '#2C6E49',
+        color: '#1F7A35',
         textAlign: 'center',
         marginBottom: 20,
     },
@@ -104,24 +104,23 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         marginBottom: 15,
         textAlign: 'justify',
-        color: '#333',
-        fontFamily: 'Roboto',
+        color: '#344054',
     },
     bold: {
         fontWeight: 'bold',
-        color: '#2C6E49',
+        color: '#1F7A35',
     },
     subheading: {
         fontSize: 22,
         fontWeight: '600',
         marginTop: 20,
         marginBottom: 10,
-        color: '#2C6E49',
+        color: '#1F7A35',
     },
     collapsibleTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#2C6E49',
+        color: '#1F7A35',
         marginTop: 20,
         paddingVertical: 10,
     },
@@ -129,8 +128,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         lineHeight: 24,
         marginBottom: 15,
-        color: '#333',
-        fontFamily: 'Roboto',
+        color: '#344054',
     },
 });
 

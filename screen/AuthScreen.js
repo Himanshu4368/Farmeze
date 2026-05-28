@@ -84,7 +84,7 @@ const AuthScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
-        <Icon name="arrow-back" size={24} color="white" />
+        <Icon name="arrow-back" size={24} color="#1F7A35" />
       </TouchableOpacity>
 
       <Text style={styles.title}>{isLogin ? 'Login' : 'Signup'}</Text>
@@ -138,31 +138,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#25BB00',
+    backgroundColor: '#F3FAF1',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#1F7A35',
     marginBottom: 10,
   },
   box: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     padding: 20,
-    borderRadius: 15,
+    borderRadius: 12,
     width: '90%',
     alignItems: 'center',
     elevation: 5,
+    borderWidth: 1,
+    borderColor: '#DDEFD8',
   },
   input: {
     width: '100%',
     height: 50,
-    borderColor: '#ccc',
+    borderColor: '#D0D5DD',
     borderWidth: 1,
     borderRadius: 10,
     marginBottom: 15,
     paddingHorizontal: 15,
-    color: 'black',
+    color: '#1F2A1F',
   },
   button: {
     backgroundColor: '#25BB00',

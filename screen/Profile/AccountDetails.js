@@ -174,14 +174,14 @@ export default AccountDetailsScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#d4f4c5',
+    backgroundColor: '#F3FAF1',
   },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#38C71C',
+    backgroundColor: '#25BB00',
     paddingHorizontal: 15,
     paddingVertical: 15,
     elevation: 5,
@@ -230,23 +230,24 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    color: '#555',
-    fontWeight: '600',
+    color: '#344054',
+    fontWeight: '700',
     marginBottom: 5,
   },
 
   input: {
     height: 48,
     backgroundColor: '#fff',
-    borderColor: '#ccc',
+    borderColor: '#D0D5DD',
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 15,
     fontSize: 16,
+    color: '#1F2A1F',
   },
 
   logoutButton: {
-    backgroundColor: '#38C71C',
+    backgroundColor: '#25BB00',
     paddingVertical: 15,
     borderRadius: 10,
     marginTop: 30,
@@ -263,5 +264,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     marginTop: 50,
+    color: '#1F2A1F',
   },
 });

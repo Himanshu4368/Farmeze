@@ -100,7 +100,7 @@ const OtpVerificationScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#d4f4c5',
+    backgroundColor: '#F3FAF1',
   },
   header: {
     flexDirection: 'row',
@@ -141,16 +141,17 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 18,
     marginBottom: 20,
-    color: '#333',
+    color: '#344054',
     textAlign: 'center',
   },
   input: {
     width: '60%',
     borderWidth: 1,
-    borderColor: '#33cc33',
+    borderColor: '#D0D5DD',
     borderRadius: 10,
     padding: 15,
-    backgroundColor: '#f9fff9',
+    backgroundColor: '#FFFFFF',
+    color: '#1F2A1F',
     fontSize: 20,
     letterSpacing: 10,
     textAlign: 'center',
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '60%',
-    backgroundColor: '#33cc33',
+    backgroundColor: '#25BB00',
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',
