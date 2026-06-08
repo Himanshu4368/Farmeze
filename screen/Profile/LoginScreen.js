@@ -14,20 +14,26 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { loginUser } from '../../api/authApi';
+import { useClerk } from '@clerk/expo';
+import { useSignIn } from '@clerk/expo/legacy';
+import {
+  getClerkErrorMessage,
+  normalizePhoneForClerk,
+} from '../../config/clerk';
 
 const LoginScreen = ({ navigation }) => {
 
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const { signOut } = useClerk();
 
   const handleLogin = async () => {
 
     // VALIDATION
 
-    if (!phone.trim() || !password.trim()) {
+    if (!identifier.trim() || !password.trim()) {
 
       Alert.alert(
         'Error',
@@ -41,52 +47,57 @@ const LoginScreen = ({ navigation }) => {
 
       setLoading(true);
 
-      console.log('Trying Login...');
+      if (!isLoaded) {
+        Alert.alert('Please wait', 'Clerk is still loading');
+        return;
+      }
 
-      // LOGIN API CALL
+      try {
+        await signOut();
+      } catch {
+        // No active Clerk session to clear.
+      }
 
-      const data = await loginUser({
-        phone: phone.trim(),
+      await AsyncStorage.clear();
+
+      const loginIdentifier =
+        identifier.includes('@')
+          ? identifier.trim().toLowerCase()
+          : normalizePhoneForClerk(identifier);
+
+      const signInAttempt = await signIn.create({
+        identifier: loginIdentifier,
         password: password.trim(),
       });
 
-      console.log(
-        'LOGIN SUCCESS:',
-        data
-      );
-
-      // SAVE JWT TOKEN
-
-      if (data.token) {
-
-        await AsyncStorage.setItem(
-          'token',
-          data.token
+      if (signInAttempt.status !== 'complete') {
+        Alert.alert(
+          'Login Pending',
+          'Please complete the remaining Clerk verification'
         );
-
-        console.log('Token Saved');
+        return;
       }
 
-      // SAVE USER DATA
+      await setActive({
+        session: signInAttempt.createdSessionId,
+      });
 
-      if (data.user) {
-
-        await AsyncStorage.setItem(
-          'user',
-          JSON.stringify(data.user)
-        );
-
-        console.log('User Saved');
-      }
-
-      // SUCCESS ALERT
-
-      Alert.alert(
-        'Success',
-        'Login Successful'
+      await AsyncStorage.setItem(
+        'token',
+        signInAttempt.createdSessionId || ''
       );
 
-      // NAVIGATE TO HOME
+      await AsyncStorage.setItem(
+        'user',
+        JSON.stringify({
+          id: signInAttempt.createdUserId,
+          _id: signInAttempt.createdUserId,
+          email: identifier.includes('@') ? loginIdentifier : '',
+          phone: identifier.includes('@') ? '' : loginIdentifier,
+        })
+      );
+
+      Alert.alert('Success', 'Login Successful');
 
       navigation.reset({
         index: 0,
@@ -101,9 +112,7 @@ const LoginScreen = ({ navigation }) => {
       );
 
       const message =
-        error.response?.data?.message ||
-        error.message ||
-        'Something went wrong';
+        getClerkErrorMessage(error, 'Something went wrong');
 
       Alert.alert(
         'Login Failed',
@@ -154,15 +163,16 @@ const LoginScreen = ({ navigation }) => {
       <View style={styles.formContainer}>
 
         <Text style={styles.label}>
-          Phone Number
+          Email or Phone Number
         </Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Enter phone number"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
+          placeholder="Enter email or phone number"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={identifier}
+          onChangeText={setIdentifier}
         />
 
         <Text style={styles.label}>

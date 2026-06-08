@@ -1,4 +1,8 @@
-import React, { useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import {
   View,
@@ -7,13 +11,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  TextInput,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 
 import Icon from "react-native-vector-icons/FontAwesome";
 
 import { useCart } from "../screen/Homescreen/CartContext";
+import {
+  getProductReviews,
+} from "../api/reviewApi";
 
 export default function ProductScreen({
   route,
@@ -27,24 +34,26 @@ export default function ProductScreen({
   const [quantity, setQuantity] =
     useState(1);
 
-  const [review, setReview] =
-    useState("");
+  const [reviewLoading, setReviewLoading] =
+    useState(false);
 
   const [reviews, setReviews] =
-    useState([
-      {
-        name: "Amit",
-        text:
-          "Very fresh and clean quality",
-      },
-      {
-        name: "Neha",
-        text:
-          "Best vegetables I bought online",
-      },
-    ]);
+    useState([]);
 
-  const rating = 4.7;
+  const productId =
+    vegetable._id ||
+    vegetable.id;
+
+  const averageRating =
+    reviews.length > 0
+      ? (
+          reviews.reduce(
+            (total, item) =>
+              total + Number(item.rating || 0),
+            0
+          ) / reviews.length
+        ).toFixed(1)
+      : vegetable.rating || 0;
 
   const pricePerKg =
     Number(
@@ -59,6 +68,21 @@ export default function ProductScreen({
 
   const total =
     pricePerKg * quantity;
+
+  const productImage =
+    vegetable.image ||
+    vegetable.imageUrl ||
+    vegetable.photoUrl;
+
+  const productImageSource =
+    productImage
+      ? typeof productImage === "string"
+        ? {
+            uri:
+              productImage,
+          }
+        : productImage
+      : require("../assets/potato.jpeg");
 
   /* ADD TO CART */
 
@@ -83,7 +107,7 @@ export default function ProductScreen({
             vegetable.name,
 
           image:
-            vegetable.image,
+            productImage,
 
           pricePerKg,
 
@@ -99,10 +123,6 @@ export default function ProductScreen({
           productData
         );
 
-        Alert.alert(
-          "Success",
-          "Item added to cart"
-        );
 
         navigation.navigate(
           "MainTabs",
@@ -124,22 +144,44 @@ export default function ProductScreen({
 
   /* REVIEW */
 
-  const submitReview = () => {
+  const getReviewName = (item) =>
+    item.userName ||
+    item.name ||
+    item.user?.name ||
+    item.user?.fullName ||
+    "Farmeze User";
 
-    if (
-      review.trim() === ""
-    ) return;
+  const getReviewText = (item) =>
+    item.comment ||
+    item.text ||
+    item.review ||
+    item.message ||
+    "";
 
-    setReviews([
-      {
-        name: "You",
-        text: review,
-      },
-      ...reviews,
-    ]);
+  const loadReviews = useCallback(async () => {
+    if (!productId) {
+      return;
+    }
 
-    setReview("");
-  };
+    try {
+      setReviewLoading(true);
+      const data =
+        await getProductReviews(productId);
+      setReviews(data);
+    } catch (error) {
+      console.log(
+        "REVIEWS LOAD ERROR:",
+        error.response?.data ||
+        error.message
+      );
+    } finally {
+      setReviewLoading(false);
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    loadReviews();
+  }, [loadReviews]);
 
   return (
 
@@ -196,15 +238,7 @@ export default function ProductScreen({
         >
 
           <Image
-            source={
-              typeof vegetable.image ===
-              "string"
-                ? {
-                    uri:
-                      vegetable.image,
-                  }
-                : vegetable.image
-            }
+            source={productImageSource}
             style={styles.image}
           />
 
@@ -244,9 +278,8 @@ export default function ProductScreen({
                   name="star"
                   size={16}
                   color={
-                    i <=
-                    Math.floor(
-                      rating
+                    i <= Math.floor(
+                      averageRating
                     )
                       ? "#FFD700"
                       : "#ccc"
@@ -264,7 +297,7 @@ export default function ProductScreen({
                 marginLeft: 8,
               }}
             >
-              {rating} (124 ratings)
+              {averageRating || "No"} ({reviews.length} ratings)
             </Text>
 
           </View>
@@ -347,48 +380,6 @@ export default function ProductScreen({
             doorstep.
           </Text>
 
-          {/* REVIEW INPUT */}
-
-          <Text
-            style={
-              styles.sectionTitle
-            }
-          >
-            Write a Review
-          </Text>
-
-          <TextInput
-            value={review}
-            onChangeText={
-              setReview
-            }
-            placeholder="Write your experience..."
-            style={
-              styles.reviewInput
-            }
-          />
-
-          <TouchableOpacity
-            style={
-              styles.submitBtn
-            }
-            onPress={
-              submitReview
-            }
-          >
-
-            <Text
-              style={{
-                color: "#fff",
-                fontWeight:
-                  "bold",
-              }}
-            >
-              Submit Review
-            </Text>
-
-          </TouchableOpacity>
-
           {/* REVIEWS */}
 
           <Text
@@ -399,11 +390,24 @@ export default function ProductScreen({
             Customer Reviews
           </Text>
 
-          {reviews.map(
+          {reviewLoading ? (
+            <ActivityIndicator
+              color="#2E7D32"
+              style={{ marginTop: 15 }}
+            />
+          ) : reviews.length === 0 ? (
+            <Text style={styles.emptyReviews}>
+              No reviews yet
+            </Text>
+          ) : reviews.map(
             (r, i) => (
 
               <View
-                key={i}
+                key={
+                  r._id ||
+                  r.id ||
+                  i
+                }
                 style={
                   styles.reviewBox
                 }
@@ -414,12 +418,37 @@ export default function ProductScreen({
                     styles.reviewName
                   }
                 >
-                  {r.name}
+                  {getReviewName(r)}
                 </Text>
 
-               <Text style={styles.reviewText}>
-  {r.text}
-</Text>
+                <View
+                  style={
+                    styles.reviewStars
+                  }
+                >
+                  {[1, 2, 3, 4, 5].map(
+                    (star) => (
+                      <Icon
+                        key={star}
+                        name="star"
+                        size={13}
+                        color={
+                          star <=
+                          Number(r.rating || 0)
+                            ? "#FFD700"
+                            : "#ccc"
+                        }
+                        style={{
+                          marginRight: 2,
+                        }}
+                      />
+                    )
+                  )}
+                </View>
+
+                <Text style={styles.reviewText}>
+                  {getReviewText(r)}
+                </Text>
 
               </View>
 
@@ -586,27 +615,6 @@ const styles =
       lineHeight: 22,
     },
 
-    reviewInput: {
-      borderWidth: 1,
-      borderColor: "#ccc",
-      borderRadius: 10,
-      padding: 12,
-      marginTop: 10,
-      backgroundColor:
-        "#fff",
-      color: "#020e02",
-    },
-
-    submitBtn: {
-      backgroundColor:
-        "#2E7D32",
-      alignSelf: "flex-end",
-      paddingVertical: 10,
-      paddingHorizontal: 15,
-      borderRadius: 8,
-      marginTop: 10,
-    },
-
     reviewBox: {
       backgroundColor:
         "#F1F8E9",
@@ -621,10 +629,19 @@ const styles =
       color: "#2E7D32",
       marginBottom: 3,
     },
+    reviewStars: {
+      flexDirection: "row",
+      marginBottom: 5,
+    },
     reviewText: {
   color: "#000",
   fontSize: 14,
 },
+
+    emptyReviews: {
+      color: "#667085",
+      marginTop: 10,
+    },
 
     bottomBar: {
       flexDirection: "row",

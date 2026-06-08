@@ -1,967 +1,1137 @@
-import React, { useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useState
+} from 'react';
 
 import {
-View,
-Text,
-StyleSheet,
-TouchableOpacity,
-ScrollView,
-Image,
-Modal,
-TextInput,
-Alert
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Ionicons';
 
 import {
-useRoute,
-useNavigation
+  useRoute,
+  useNavigation,
+  useFocusEffect,
 } from '@react-navigation/native';
 
 import RazorpayCheckout from 'react-native-razorpay';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
-useCart
+  useCart
 } from '../screen/Homescreen/CartContext';
 
 import {
-createOrder
+  createOrder
 } from '../api/orderApi';
+import {
+  getUserProfile
+} from '../api/authApi';
+
+const CURRENCY = '\u20B9';
+
+const getItemImage = (item) => {
+  if (!item?.image) {
+    return null;
+  }
+
+  return typeof item.image === 'string'
+    ? item.image
+    : null;
+};
+
+const getImageSource = (image) => {
+  if (image) {
+    return typeof image === 'string'
+      ? { uri: image }
+      : image;
+  }
+
+  return require('../assets/potato.jpeg');
+};
 
 const Checkout = () => {
 
-const route=useRoute();
-const navigation=useNavigation();
+  const route = useRoute();
+  const navigation = useNavigation();
+
+  const { clearCart } = useCart();
+
+  const {
+    items = [],
+    total = 0
+  } = route.params || {};
+
+  const deliveryCharge = 0;
+
+  const [paymentMethod, setPaymentMethod] =
+    useState('COD');
+
+  const [showSuccess, setShowSuccess] =
+    useState(false);
+
+  const [placingOrder, setPlacingOrder] =
+    useState(false);
+
+  const [editingAddress, setEditingAddress] =
+    useState(false);
+
+  const [appliedPromotion, setAppliedPromotion] =
+    useState(null);
+
+  const [address, setAddress] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    line1: '',
+    city: ''
+  });
+
+  const buildProfileAddress = (profile) => ({
+    name:
+      profile.name || '',
+    phone:
+      profile.phone || '',
+    email:
+      profile.email || '',
+    line1:
+      profile.address ||
+      [profile.address1, profile.address2]
+        .filter(Boolean)
+        .join(', '),
+    city:
+      [
+        profile.city,
+        profile.state,
+        profile.pincode ||
+        profile.pinCode
+      ]
+        .filter(Boolean)
+        .join(', ')
+  });
+
+  const loadProfileAddress = useCallback(async () => {
+    try {
+      const storedUser =
+        await AsyncStorage.getItem('user');
+
+      if (!storedUser) {
+        return;
+      }
+
+      const parsed =
+        JSON.parse(storedUser);
+
+      const userId =
+        parsed.id || parsed._id;
+      const isMongoId =
+        /^[a-f\d]{24}$/i.test(String(userId || ''));
+
+      const profile =
+        isMongoId
+          ? await getUserProfile(userId)
+          : parsed;
+
+      await AsyncStorage.setItem('user', JSON.stringify(profile));
+      setAddress(buildProfileAddress(profile));
+    } catch (error) {
+      console.log(
+        'PROFILE ADDRESS ERROR:',
+        error.response?.data ||
+        error.message
+      );
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProfileAddress();
+    }, [loadProfileAddress])
+  );
+
+  useEffect(() => {
+    if (route.params?.selectedPromotion) {
+      setAppliedPromotion(route.params.selectedPromotion);
+    }
+  }, [route.params?.selectedPromotion]);
 
-const {clearCart}=useCart();
+  const calculateDiscount = (promotion) => {
+    if (!promotion) {
+      return 0;
+    }
 
-const {
-items=[],
-total=0
-}=route.params || {};
+    if (total < Number(promotion.minOrderAmount || 0)) {
+      return 0;
+    }
 
-const deliveryCharge=40;
-const discount=20;
+    const rawDiscount =
+      promotion.discountType === 'percentage'
+        ? Math.round(total * Number(promotion.discountValue || 0) / 100)
+        : Number(promotion.discountValue || 0);
 
-const grandTotal=
-total+
-deliveryCharge-
-discount;
+    const cappedDiscount =
+      promotion.maxDiscountAmount
+        ? Math.min(rawDiscount, Number(promotion.maxDiscountAmount))
+        : rawDiscount;
 
-const [paymentMethod,
-setPaymentMethod]=
-useState('COD');
+    return Math.min(cappedDiscount, total);
+  };
 
-const [showSuccess,
-setShowSuccess]=
-useState(false);
+  const discount = calculateDiscount(appliedPromotion);
 
-const [placingOrder,
-setPlacingOrder]=
-useState(false);
+  const grandTotal =
+    Math.max(
+      total + deliveryCharge - discount,
+      0
+    );
 
-const [editingAddress,
-setEditingAddress]=
-useState(false);
+  const removePromo = () => {
+    setAppliedPromotion(null);
+  };
 
-const [address,
-setAddress]=useState({
+  const openDiscounts = () => {
+    navigation.navigate(
+      'DiscountPromotions',
+      {
+        items,
+        total,
+        selectedCode:
+          appliedPromotion?.code
+      }
+    );
+  };
 
-name:'Himanshu Verma',
-phone:'9999999999',
-line1:'123 Green Farm Street',
-city:'Punjab, India'
+  const buildOrderPayload =
+    (method) => ({
 
-});
+      customerName:
+        address.name.trim(),
 
+      customerPhone:
+        address.phone.trim(),
 
-const buildOrderPayload =
-(method)=>({
+      customerEmail:
+        address.email || 'customer@farmeze.local',
 
-customerName:
-address.name.trim(),
+      deliveryAddress:
+        address.line1.trim(),
 
-customerPhone:
-address.phone.trim(),
+      city:
+        address.city.trim(),
 
-customerEmail:
-'test@gmail.com',
+      paymentMedium:
+        method.toLowerCase(),
 
-deliveryAddress:
-address.line1.trim(),
+      paymentStatus:
+        method === 'COD'
+          ? 'unpaid'
+          : 'paid',
 
-city:
-address.city.trim(),
+      subtotal:
+        total,
 
-paymentMedium:
-method.toLowerCase(),
+      discountAmount:
+        discount,
 
-subtotal:
-total,
+      deliveryFee:
+        deliveryCharge,
 
-discountAmount:
-discount,
+      totalAmount:
+        grandTotal,
 
-deliveryFee:
-deliveryCharge,
+      promoCode:
+        appliedPromotion?.code || undefined,
 
-totalAmount:
-grandTotal,
+      items:
+        items.map(
+          (item) => ({
 
-items:
-items.map(
-(item)=>({
+            productId:
+              item.id ||
+              item._id,
 
-productId:
-item.id ||
-item._id,
+            productName:
+              item.name,
 
-productName:
-item.name,
+            quantity:
+              Number(item.quantity) || 1,
 
-quantity:
-Number(item.quantity) || 1,
+            price:
+              Number(item.pricePerKg) || 0,
 
-price:
-Number(item.pricePerKg) || 0
+            image:
+              getItemImage(item)
 
-})
-)
+          })
+        )
 
-});
+    });
 
+  const submitOrder =
+    async (method) => {
 
-const submitOrder =
-async(method)=>{
+      if (placingOrder) {
+        return;
+      }
 
-if(placingOrder){
-return;
-}
+      try {
 
-try{
+        setPlacingOrder(true);
 
-setPlacingOrder(true);
+        const response =
+          await createOrder(
+            buildOrderPayload(method)
+          );
 
-const response =
-await createOrder(
-buildOrderPayload(method)
-);
+        handleSuccessNavigation(response);
 
-console.log(
-'ORDER SUCCESS:',
-response
-);
+      } catch (error) {
 
-handleSuccessNavigation();
+        Alert.alert(
+          'Order Failed',
+          error.response?.data?.message ||
+          'Failed to place order'
+        );
 
-}catch(error){
+      } finally {
 
-console.log(
-'ORDER ERROR:',
-error.response?.data ||
-error.message
-);
+        setPlacingOrder(false);
 
-Alert.alert(
-'Order Failed',
-error.response?.data?.message ||
-'Failed to place order'
-);
+      }
 
-}finally{
+    };
 
-setPlacingOrder(false);
+  const handleSuccessNavigation = (createdOrder) => {
 
-}
+    try {
 
-};
+      clearCart();
 
+      setShowSuccess(true);
 
-/* SUCCESS */
+      setTimeout(() => {
 
-const handleSuccessNavigation = () => {
+        setShowSuccess(false);
 
-try {
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'MainTabs',
+              state: {
+                routes: [
+                  {
+                    name: 'Order',
+                    params: {
+                      latestOrderId: createdOrder?._id
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        });
 
-clearCart();
+      }, 2500);
 
-setShowSuccess(true);
+    } catch (error) {
 
-setTimeout(() => {
+      Alert.alert(
+        'Error',
+        'Something went wrong'
+      );
 
-setShowSuccess(false);
+    }
 
-navigation.reset({
-index: 0,
-routes: [
-{
-name: 'MainTabs',
-state: {
-routes: [
-{
-name: 'Order',
-params: {
-orderItems: items,
-totalAmount: grandTotal,
-status: 'Placed'
-}
-}
-]
-}
-}
-]
-});
+  };
 
-}, 2500);
+  const handleRazorpayPayment =
+    () => {
 
-} catch(error){
+      const options = {
 
-console.log(error);
+        description:
+          'Farmeze Order Payment',
 
-Alert.alert(
-'Error',
-'Something went wrong'
-);
+        currency: 'INR',
 
-}
+        key:
+          'rzp_test_SlZ9QD1cFkxTig',
 
-};
+        amount:
+          grandTotal * 100,
 
+        name: 'Farmeze',
 
+        prefill: {
 
-/* RAZORPAY */
+          email:
+            address.email || 'test@gmail.com',
 
-const handleRazorpayPayment=
-()=>{
+          contact:
+            address.phone,
 
-const options={
+          name:
+            address.name
 
-description:
-'Farmeze Order Payment',
+        },
 
-currency:'INR',
+        theme: {
+          color: '#38C71C'
+        }
 
-key:
-'rzp_test_SlZ9QD1cFkxTig',
+      };
 
-amount:
-grandTotal*100,
+      RazorpayCheckout
+        .open(options)
 
-name:'Farmeze',
+        .then(() => {
 
-prefill:{
+          submitOrder(
+            paymentMethod
+          );
 
-email:
-'test@gmail.com',
+        })
 
-contact:
-address.phone,
+        .catch((error) => {
 
-name:
-address.name
+          Alert.alert(
+            'Payment Failed',
+            error.description ||
+            'Please try again'
+          );
 
-},
+        });
 
-theme:{
-color:'#38C71C'
-}
+    };
 
-};
+  const handlePlaceOrder =
+    () => {
 
-RazorpayCheckout
-.open(options)
+      if (
+        address.name === '' ||
+        address.phone === '' ||
+        address.line1 === '' ||
+        address.city === ''
+      ) {
 
-.then(()=>{
+        Alert.alert(
+          'Address Missing',
+          'Please fill all details'
+        );
 
-submitOrder(
-paymentMethod
-);
+        return;
 
-})
+      }
 
-.catch((error)=>{
+      if (
+        paymentMethod === 'UPI'
+        ||
+        paymentMethod === 'Card'
+      ) {
 
-console.log(error);
+        handleRazorpayPayment();
 
-Alert.alert(
-'Payment Failed',
-error.description ||
-'Please try again'
-);
+      }
 
-});
+      else {
 
-};
+        submitOrder(
+          paymentMethod
+        );
 
+      }
 
+    };
 
-/* PLACE ORDER */
+  return (
 
-const handlePlaceOrder=
-()=>{
+    <View style={styles.container}>
 
-if(
-address.name==='' ||
-address.phone==='' ||
-address.line1==='' ||
-address.city===''
-){
+      <View style={styles.header}>
 
-Alert.alert(
-'Address Missing',
-'Please fill all details'
-);
+        <TouchableOpacity
+          onPress={() =>
+            navigation.goBack()
+          }
+        >
 
-return;
+          <Icon
+            name='arrow-back'
+            size={25}
+            color='white'
+          />
 
-}
+        </TouchableOpacity>
 
-if(
-paymentMethod==='UPI'
-||
-paymentMethod==='Card'
-){
+        <Text
+          style={styles.headerText}
+        >
+          Checkout
+        </Text>
 
-handleRazorpayPayment();
+        <View style={{ width: 25 }} />
 
-}
+      </View>
 
-else{
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+      >
 
-submitOrder(
-paymentMethod
-);
+        <View style={styles.card}>
 
-}
+          <View
+            style={styles.rowBetween}
+          >
 
-};
+            <Text
+              style={styles.cardTitle}
+            >
+              Delivery Address
+            </Text>
 
+            <TouchableOpacity
+              onPress={() =>
+                setEditingAddress(
+                  !editingAddress
+                )
+              }
+            >
 
-return(
+              <Text
+                style={styles.change}
+              >
+                {editingAddress ? 'Save' : 'Edit'}
+              </Text>
 
-<View style={styles.container}>
+            </TouchableOpacity>
 
+          </View>
 
-{/* HEADER */}
+          {
+            editingAddress ?
 
-<View style={styles.header}>
+              <>
 
-<TouchableOpacity
-onPress={()=>
-navigation.goBack()
-}
->
+                <TextInput
+                  style={styles.input}
+                  placeholder='Name'
+                  placeholderTextColor="#666"
+                  value={address.name}
+                  onChangeText={(text) =>
+                    setAddress({
+                      ...address,
+                      name: text
+                    })
+                  }
+                />
 
-<Icon
-name='arrow-back'
-size={25}
-color='white'
-/>
+                <TextInput
+                  style={styles.input}
+                  placeholder='Phone'
+                  placeholderTextColor="#666"
+                  keyboardType='phone-pad'
+                  value={address.phone}
+                  onChangeText={(text) =>
+                    setAddress({
+                      ...address,
+                      phone: text
+                    })
+                  }
+                />
 
-</TouchableOpacity>
+                <TextInput
+                  style={styles.input}
+                  placeholder='Address'
+                  placeholderTextColor="#666"
+                  value={address.line1}
+                  onChangeText={(text) =>
+                    setAddress({
+                      ...address,
+                      line1: text
+                    })
+                  }
+                />
 
-<Text
-style={styles.headerText}
->
-Checkout
-</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder='City'
+                  placeholderTextColor="#666"
+                  value={address.city}
+                  onChangeText={(text) =>
+                    setAddress({
+                      ...address,
+                      city: text
+                    })
+                  }
+                />
 
-<View style={{width:25}}/>
+              </>
 
-</View>
+              :
 
+              <>
 
-<ScrollView
-showsVerticalScrollIndicator={false}
->
+                <Text style={styles.textBlack}>
+                  {address.name}
+                </Text>
 
-{/* ADDRESS */}
+                <Text style={styles.textBlack}>
+                  {address.phone}
+                </Text>
 
-<View style={styles.card}>
+                <Text style={styles.textBlack}>
+                  {address.line1}
+                </Text>
 
-<View
-style={styles.rowBetween}
->
+                <Text style={styles.textBlack}>
+                  {address.city}
+                </Text>
 
-<Text
-style={styles.cardTitle}
->
+              </>
 
-Delivery Address
+          }
 
-</Text>
+        </View>
 
-<TouchableOpacity
-onPress={()=>
-setEditingAddress(
-!editingAddress
-)
-}
->
+        <View style={styles.card}>
 
-<Text
-style={styles.change}
->
+          <Text
+            style={styles.cardTitle}
+          >
+            Order Summary
+          </Text>
 
-{
-editingAddress
-?
-'Save'
-:
-'Edit'
-}
+          {
+            items.map(
+              (item, index) => (
 
-</Text>
+                <View
+                  key={index}
+                  style={styles.productRow}
+                >
 
-</TouchableOpacity>
+                  <Image
+                    source={getImageSource(item.image)}
+                    style={styles.image}
+                  />
 
-</View>
+                  <View style={{ flex: 1 }}>
 
-{
-editingAddress ?
+                    <Text style={styles.textBlack}>
+                      {item.name}
+                    </Text>
 
-<>
+                    <Text style={styles.textBlack}>
+                      {item.quantity}
+                      {' x '}
+                      {CURRENCY}
+                      {item.pricePerKg}
+                    </Text>
 
-<TextInput
-style={styles.input}
-placeholder='Name'
-placeholderTextColor="#666"
-value={address.name}
-onChangeText={(text)=>
-setAddress({
-...address,
-name:text
-})
-}
-/>
+                  </View>
 
-<TextInput
-style={styles.input}
-placeholder='Phone'
-placeholderTextColor="#666"
-keyboardType='phone-pad'
-value={address.phone}
-onChangeText={(text)=>
-setAddress({
-...address,
-phone:text
-})
-}
-/>
+                  <Text style={styles.textBlack}>
+                    {CURRENCY}
+                    {item.quantity * item.pricePerKg}
+                  </Text>
 
-<TextInput
-style={styles.input}
-placeholder='Address'
-placeholderTextColor="#666"
-value={address.line1}
-onChangeText={(text)=>
-setAddress({
-...address,
-line1:text
-})
-}
-/>
+                </View>
 
-<TextInput
-style={styles.input}
-placeholder='City'
-placeholderTextColor="#666"
-value={address.city}
-onChangeText={(text)=>
-setAddress({
-...address,
-city:text
-})
-}
-/>
+              )
+            )
+          }
 
-</>
+        </View>
 
-:
+        <TouchableOpacity
+          style={styles.discountCard}
+          activeOpacity={0.85}
+          onPress={openDiscounts}
+        >
 
-<>
+          <View style={styles.discountIcon}>
+            <Icon
+              name="pricetag-outline"
+              size={22}
+              color="#1F7A35"
+            />
+          </View>
 
-<Text style={styles.textBlack}>
-{address.name}
-</Text>
+          <View style={styles.discountInfo}>
+            <Text style={styles.discountTitle}>
+              Discounts & Offers
+            </Text>
 
-<Text style={styles.textBlack}>
-{address.phone}
-</Text>
+            <Text style={styles.discountSubtitle}>
+              {
+                appliedPromotion
+                  ? `${appliedPromotion.code || 'Offer'} applied, saved ${CURRENCY}${discount}`
+                  : 'View available offers'
+              }
+            </Text>
+          </View>
 
-<Text style={styles.textBlack}>
-{address.line1}
-</Text>
+          {
+            appliedPromotion ? (
+              <TouchableOpacity
+                onPress={removePromo}
+              >
+                <Text style={styles.removePromo}>
+                  Remove
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Icon
+                name="chevron-forward"
+                size={22}
+                color="#98A2B3"
+              />
+            )
+          }
 
-<Text style={styles.textBlack}>
-{address.city}
-</Text>
+        </TouchableOpacity>
 
-</>
+        {
+          appliedPromotion && (
+            <TouchableOpacity
+              style={styles.changeOfferRow}
+              activeOpacity={0.85}
+              onPress={openDiscounts}
+            >
+              <Text style={styles.changeOfferText}>
+                Change offer
+              </Text>
+            </TouchableOpacity>
+          )
+        }
 
-}
+        <View style={styles.card}>
 
-</View>
+          <Text
+            style={styles.cardTitle}
+          >
+            Payment Method
+          </Text>
 
+          {
+            ['COD', 'UPI', 'Card']
+              .map(
+                (method) => (
 
+                  <TouchableOpacity
 
-{/* ORDER SUMMARY */}
+                    key={method}
 
-<View style={styles.card}>
+                    style={[
 
-<Text
-style={styles.cardTitle}
->
+                      styles.payment,
 
-Order Summary
+                      paymentMethod ===
+                      method
+                      &&
+                      styles.selected
 
-</Text>
+                    ]}
 
-{
-items.map(
-(item,index)=>(
+                    onPress={() =>
+                      setPaymentMethod(
+                        method
+                      )
+                    }
+                  >
 
-<View
-key={index}
-style={styles.productRow}
->
+                    <Text style={styles.paymentText}>
 
-<Image
-source={
-item.image
-?
-typeof item.image==='string'
-?
-{
-uri:item.image
-}
-:
-item.image
-:
-require('../assets/potato.jpeg')
-}
-style={styles.image}
-/>
+                      {
+                        method === 'COD'
+                        &&
+                        'Cash On Delivery'
+                      }
 
-<View style={{flex:1}}>
+                      {
+                        method === 'UPI'
+                        &&
+                        'UPI / Razorpay'
+                      }
 
-<Text style={styles.textBlack}>
-{item.name}
-</Text>
+                      {
+                        method === 'Card'
+                        &&
+                        'Card / Razorpay'
+                      }
 
-<Text style={styles.textBlack}>
+                    </Text>
 
-{item.quantity}
-× ₹
-{item.pricePerKg}
+                  </TouchableOpacity>
 
-</Text>
+                )
+              )
+          }
 
-</View>
+        </View>
 
-<Text style={styles.textBlack}>
+        <View style={styles.card}>
 
-₹
-{
-item.quantity*
-item.pricePerKg
-}
+          <View style={styles.rowBetween}>
 
-</Text>
+            <Text style={styles.summaryText}>
+              Items Total
+            </Text>
 
-</View>
+            <Text style={styles.summaryText}>
+              {CURRENCY}{total}
+            </Text>
 
-))
-}
+          </View>
 
-</View>
+          {
+            discount > 0 && (
+              <View style={styles.rowBetween}>
 
+                <Text style={styles.summaryText}>
+                  Discount
+                </Text>
 
+                <Text style={styles.discountText}>
+                  -{CURRENCY}{discount}
+                </Text>
 
-{/* PAYMENT */}
+              </View>
+            )
+          }
 
-<View style={styles.card}>
+          <View
+            style={styles.divider}
+          />
 
-<Text
-style={styles.cardTitle}
->
+          <View style={styles.rowBetween}>
 
-Payment Method
+            <Text
+              style={{
+                fontWeight: 'bold',
+                fontSize: 18,
+                color: "#000"
+              }}
+            >
+              Grand Total
+            </Text>
 
-</Text>
+            <Text
+              style={{
+                fontWeight: 'bold',
+                fontSize: 18,
+                color: "#000"
+              }}
+            >
+              {CURRENCY}{grandTotal}
+            </Text>
 
-{
-['COD','UPI','Card']
-.map(
-(method)=>(
+          </View>
 
-<TouchableOpacity
+        </View>
 
-key={method}
+      </ScrollView>
 
-style={[
+      <View style={styles.footer}>
 
-styles.payment,
+        <TouchableOpacity
+          style={[
+            styles.orderBtn,
+            placingOrder &&
+            styles.orderBtnDisabled
+          ]}
+          onPress={
+            handlePlaceOrder
+          }
+          disabled={placingOrder}
+        >
 
-paymentMethod===
-method
-&&
-styles.selected
+          <Text
+            style={styles.orderText}
+          >
 
-]}
+            {
+              placingOrder
+                ? 'Placing Order...'
+                : `Place Order ${CURRENCY}${grandTotal}`
+            }
 
-onPress={()=>
-setPaymentMethod(
-method
-)
-}
->
+          </Text>
 
-<Text style={styles.paymentText}>
+        </TouchableOpacity>
 
-{
-method==='COD'
-&&
-'Cash On Delivery'
-}
+      </View>
 
-{
-method==='UPI'
-&&
-'UPI / Razorpay'
-}
+      <Modal
+        visible={showSuccess}
+        transparent
+        animationType='fade'
+      >
 
-{
-method==='Card'
-&&
-'Card / Razorpay'
-}
+        <View
+          style={styles.modal}
+        >
 
-</Text>
+          <View
+            style={styles.successBox}
+          >
 
-</TouchableOpacity>
+            <Icon
+              name='checkmark-circle'
+              size={90}
+              color='#38C71C'
+            />
 
-))
-}
+            <Text
+              style={{
+                fontSize: 22,
+                fontWeight: 'bold',
+                marginTop: 15,
+                color: "#000"
+              }}
+            >
+              Order Placed Successfully
+            </Text>
 
-</View>
+            <Text
+              style={{
+                marginTop: 10,
+                fontSize: 14,
+                color: '#777',
+                textAlign: 'center'
+              }}
+            >
+              Your fresh farm products will be delivered soon
+            </Text>
 
+          </View>
 
+        </View>
 
-{/* BILL */}
+      </Modal>
 
-<View style={styles.card}>
+    </View>
 
-<View style={styles.rowBetween}>
-
-<Text style={styles.summaryText}>
-Items Total
-</Text>
-
-<Text style={styles.summaryText}>
-₹{total}
-</Text>
-
-</View>
-
-<View style={styles.rowBetween}>
-
-<Text style={styles.summaryText}>
-Delivery Fee
-</Text>
-
-<Text style={styles.summaryText}>
-₹{deliveryCharge}
-</Text>
-
-</View>
-
-<View style={styles.rowBetween}>
-
-<Text style={styles.summaryText}>
-Discount
-</Text>
-
-<Text style={styles.summaryText}>
--₹{discount}
-</Text>
-
-</View>
-
-<View
-style={styles.divider}
-/>
-
-<View style={styles.rowBetween}>
-
-<Text
-style={{
-fontWeight:'bold',
-fontSize:18,
-color:"#000"
-}}
->
-Grand Total
-</Text>
-
-<Text
-style={{
-fontWeight:'bold',
-fontSize:18,
-color:"#000"
-}}
->
-₹{grandTotal}
-</Text>
-
-</View>
-
-</View>
-
-</ScrollView>
-
-
-{/* FOOTER */}
-
-<View style={styles.footer}>
-
-<TouchableOpacity
-style={[
-styles.orderBtn,
-placingOrder &&
-styles.orderBtnDisabled
-]}
-onPress={
-handlePlaceOrder
-}
-disabled={placingOrder}
->
-
-<Text
-style={styles.orderText}
->
-
-{
-placingOrder
-?
-'Placing Order...'
-:
-`Place Order ₹${grandTotal}`
-}
-
-</Text>
-
-</TouchableOpacity>
-
-</View>
-
-
-
-{/* SUCCESS POPUP */}
-
-<Modal
-visible={showSuccess}
-transparent
-animationType='fade'
->
-
-<View
-style={styles.modal}
->
-
-<View
-style={styles.successBox}
->
-
-<Icon
-name='checkmark-circle'
-size={90}
-color='#38C71C'
-/>
-
-<Text
-style={{
-fontSize:22,
-fontWeight:'bold',
-marginTop:15,
-color:"#000"
-}}
->
-Order Placed Successfully 🎉
-</Text>
-
-<Text
-style={{
-marginTop:10,
-fontSize:14,
-color:'#777',
-textAlign:'center'
-}}
->
-Your fresh farm products
-will be delivered soon
-</Text>
-
-</View>
-
-</View>
-
-</Modal>
-
-</View>
-
-);
+  );
 
 };
 
 export default Checkout;
 
+const styles = StyleSheet.create({
 
+  container: {
+    flex: 1,
+    backgroundColor: '#F3FAF1'
+  },
 
-const styles=StyleSheet.create({
+  header: {
+    backgroundColor: '#25BB00',
+    paddingTop: 20,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
 
-container:{
-flex:1,
-backgroundColor:'#F3FAF1'
-},
+  headerText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white'
+  },
 
-header:{
-backgroundColor:'#25BB00',
-paddingTop:20,
-paddingBottom:15,
-paddingHorizontal:20,
-flexDirection:'row',
-justifyContent:'space-between',
-alignItems:'center'
-},
+  card: {
+    backgroundColor: '#fff',
+    margin: 15,
+    padding: 15,
+    borderRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#DDEFD8'
+  },
 
-headerText:{
-fontSize:20,
-fontWeight:'bold',
-color:'white'
-},
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 10,
+    color: '#1F7A35'
+  },
 
-card:{
-backgroundColor:'#fff',
-margin:15,
-padding:15,
-borderRadius:12,
-elevation:3,
-borderWidth:1,
-borderColor:'#DDEFD8'
-},
+  change: {
+    color: '#38C71C',
+    fontWeight: 'bold'
+  },
 
-cardTitle:{
-fontSize:18,
-fontWeight:'800',
-marginBottom:10,
-color:'#1F7A35'
-},
+  input: {
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 10,
+    color: '#000',
+    backgroundColor: '#FFFFFF'
+  },
 
-change:{
-color:'#38C71C',
-fontWeight:'bold'
-},
+  textBlack: {
+    color: "#000"
+  },
 
-input:{
-borderWidth:1,
-borderColor:'#D0D5DD',
-padding:10,
-marginVertical:5,
-borderRadius:10,
-color:'#000',
-backgroundColor:'#FFFFFF'
-},
+  paymentText: {
+    color: "#000",
+    fontSize: 15
+  },
 
-textBlack:{
-color:"#000"
-},
+  summaryText: {
+    color: "#000"
+  },
 
-paymentText:{
-color:"#000",
-fontSize:15
-},
+  discountText: {
+    color: '#1F7A35',
+    fontWeight: '700'
+  },
 
-summaryText:{
-color:"#000"
-},
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 5
+  },
 
-rowBetween:{
-flexDirection:'row',
-justifyContent:'space-between',
-marginVertical:5
-},
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10
+  },
 
-productRow:{
-flexDirection:'row',
-alignItems:'center',
-marginVertical:10
-},
+  image: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    marginRight: 10
+  },
 
-image:{
-width:60,
-height:60,
-borderRadius:10,
-marginRight:10
-},
+  discountCard: {
+    backgroundColor: '#fff',
+    margin: 15,
+    padding: 15,
+    borderRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#DDEFD8',
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
 
-payment:{
-padding:12,
-backgroundColor:'#F9FAFB',
-borderRadius:10,
-marginVertical:5,
-borderWidth:1,
-borderColor:'#E4E7EC'
-},
+  discountIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E7F6E2',
+    marginRight: 12
+  },
 
-selected:{
-backgroundColor:'#E7F6E2',
-borderColor:'#25BB00'
-},
+  discountInfo: {
+    flex: 1,
+  },
 
-divider:{
-height:1,
-backgroundColor:'#ddd',
-marginVertical:10
-},
+  discountTitle: {
+    color: '#1F2A1F',
+    fontSize: 16,
+    fontWeight: '800'
+  },
 
-footer:{
-padding:15
-},
+  discountSubtitle: {
+    color: '#667085',
+    marginTop: 3
+  },
 
-orderBtn:{
-backgroundColor:'#38C71C',
-padding:15,
-borderRadius:15,
-alignItems:'center'
-},
+  changeOfferRow: {
+    marginHorizontal: 15,
+    marginTop: -5,
+    marginBottom: 15,
+    alignItems: 'flex-end'
+  },
 
-orderBtnDisabled:{
-opacity:0.7
-},
+  changeOfferText: {
+    color: '#1F7A35',
+    fontWeight: '800'
+  },
 
-orderText:{
-color:'#fff',
-fontWeight:'bold',
-fontSize:16
-},
+  removePromo: {
+    color: '#B42318',
+    fontWeight: '700',
+    marginLeft: 10
+  },
 
-modal:{
-flex:1,
-justifyContent:'center',
-alignItems:'center',
-backgroundColor:'rgba(0,0,0,0.4)'
-},
+  payment: {
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    marginVertical: 5,
+    borderWidth: 1,
+    borderColor: '#E4E7EC'
+  },
 
-successBox:{
-backgroundColor:'#fff',
-paddingVertical:35,
-paddingHorizontal:30,
-borderRadius:25,
-alignItems:'center',
-width:'80%',
-elevation:10
-}
+  selected: {
+    backgroundColor: '#E7F6E2',
+    borderColor: '#25BB00'
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: '#ddd',
+    marginVertical: 10
+  },
+
+  footer: {
+    padding: 15
+  },
+
+  orderBtn: {
+    backgroundColor: '#38C71C',
+    padding: 15,
+    borderRadius: 15,
+    alignItems: 'center'
+  },
+
+  orderBtnDisabled: {
+    opacity: 0.7
+  },
+
+  orderText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16
+  },
+
+  modal: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)'
+  },
+
+  successBox: {
+    backgroundColor: '#fff',
+    paddingVertical: 35,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    alignItems: 'center',
+    width: '80%',
+    elevation: 10
+  }
 
 });

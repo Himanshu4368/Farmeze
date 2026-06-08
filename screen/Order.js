@@ -1,5 +1,5 @@
 import React, {
-  useEffect,
+  useCallback,
   useState
 } from 'react';
 
@@ -13,14 +13,86 @@ import {
   ActivityIndicator,
 } from 'react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import {
+  useFocusEffect
+} from '@react-navigation/native';
+
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-import { getOrders } from '../api/orderApi';
+import { getUserOrders } from '../api/orderApi';
+import { getProducts } from '../api/productApi';
+
+const CURRENCY = '\u20B9';
+
+const getOrderItemImage = (item) =>
+  item?.image ||
+  item?.productId?.imageUrl ||
+  item?.product?.imageUrl;
+
+const getImageSource = (image) => {
+  if (image) {
+    return { uri: image };
+  }
+
+  return require('../assets/potato.jpeg');
+};
+
+const statusStyle = (status) => {
+  if (status === 'delivered') {
+    return styles.delivered;
+  }
+
+  if (status === 'cancelled') {
+    return styles.cancelled;
+  }
+
+  if (status === 'shipped') {
+    return styles.shipped;
+  }
+
+  return styles.packed;
+};
+
+const getProductId = (item) => {
+  if (!item?.productId) {
+    return null;
+  }
+
+  return typeof item.productId === 'string'
+    ? item.productId
+    : item.productId._id;
+};
+
+const enrichOrdersWithProductImages = (orders, products) => {
+  const productMap = products.reduce((map, product) => {
+    map[product._id || product.id] = product;
+    return map;
+  }, {});
+
+  return orders.map((order) => ({
+    ...order,
+    items: order.items?.map((item) => {
+      const product =
+        productMap[getProductId(item)];
+
+      return {
+        ...item,
+        image:
+          item.image ||
+          item.productId?.imageUrl ||
+          product?.imageUrl,
+      };
+    }) || [],
+  }));
+};
 
 const OrderScreen = ({
-  navigation
+  navigation,
+  route
 }) => {
 
   const [orders, setOrders] =
@@ -29,21 +101,43 @@ const OrderScreen = ({
   const [loading, setLoading] =
     useState(true);
 
-  // FETCH ORDERS
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
 
     try {
 
+      const storedUser =
+        await AsyncStorage.getItem('user');
+      const user =
+        storedUser
+          ? JSON.parse(storedUser)
+          : {};
+
       const response =
-        await getOrders();
+        await getUserOrders(user.email);
 
-      console.log(
-        "ORDERS:",
-        response
+      const products =
+        await getProducts();
+
+      setOrders(
+        (() => {
+          const enrichedOrders =
+            enrichOrdersWithProductImages(
+          Array.isArray(response) ? response : [],
+          Array.isArray(products) ? products : []
+            );
+
+          const latestOrderId =
+            route?.params?.latestOrderId;
+
+          if (latestOrderId) {
+            return enrichedOrders.filter(
+              (order) => order._id === latestOrderId
+            );
+          }
+
+          return enrichedOrders;
+        })()
       );
-
-      setOrders(response);
 
     } catch (error) {
 
@@ -57,15 +151,13 @@ const OrderScreen = ({
 
       setLoading(false);
     }
-  };
+  }, [route?.params?.latestOrderId]);
 
-  useEffect(() => {
-
-    fetchOrders();
-
-  }, []);
-
-  // LOADING
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [fetchOrders])
+  );
 
   if (loading) {
 
@@ -82,8 +174,6 @@ const OrderScreen = ({
     );
   }
 
-  // RENDER ORDER ITEM
-
   const renderOrder = ({
     item
   }) => {
@@ -98,73 +188,77 @@ const OrderScreen = ({
     const quantity =
       firstItem?.quantity || 1;
 
+    const itemCount =
+      item.items?.length || 0;
+
     return (
 
-      <View style={styles.card}>
-
-        {/* IMAGE */}
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate(
+            'OrderDetails',
+            {
+              orderId: item._id,
+              order: item
+            }
+          )
+        }
+      >
 
         <Image
-          source={require('../assets/potato.jpeg')}
+          source={getImageSource(getOrderItemImage(firstItem))}
           style={styles.image}
         />
 
-        {/* INFO */}
-
         <View style={styles.info}>
 
-          <Text style={styles.name}>
+          <Text
+            style={styles.name}
+            numberOfLines={1}
+          >
             {name}
           </Text>
 
-          <Text>
-            Quantity:
-            {' '}
-            {quantity}
-            {' '}
-            Kg
+          <Text style={styles.metaText}>
+            {quantity} Kg
+            {itemCount > 1 ? ` + ${itemCount - 1} more` : ''}
           </Text>
 
           <Text style={styles.price}>
-            ₹{item.totalAmount}
+            {CURRENCY}{item.totalAmount}
           </Text>
 
-          <Text>
-            Payment:
-            {' '}
-            {item.paymentMedium || 'COD'}
+          <Text style={styles.metaText}>
+            Payment: {item.paymentMedium || 'cod'}
           </Text>
 
-          <Text>
-
+          <Text style={styles.metaText}>
             Status:
-
             <Text
-              style={
-                item.status === 'delivered'
-                  ? styles.delivered
-                  : styles.packed
-              }
+              style={statusStyle(item.status)}
             >
-
               {' '}
               {item.status || 'approved'}
-
             </Text>
-
           </Text>
 
         </View>
 
-      </View>
+        <Ionicons
+          name="chevron-forward"
+          size={22}
+          color="#98A2B3"
+        />
+
+      </TouchableOpacity>
     );
   };
 
   return (
 
     <View style={styles.container}>
-
-      {/* HEADER */}
 
       <View style={styles.header}>
 
@@ -183,14 +277,12 @@ const OrderScreen = ({
         </TouchableOpacity>
 
         <Text style={styles.headerText}>
-          My Orders
+          Current Order
         </Text>
 
         <View style={{ width: 28 }} />
 
       </View>
-
-      {/* EMPTY */}
 
       {
         orders.length === 0 ? (
@@ -269,6 +361,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
     flexDirection: 'row',
+    alignItems: 'center',
     elevation: 3,
     borderWidth: 1,
     borderColor: '#DDEFD8'
@@ -277,7 +370,8 @@ const styles = StyleSheet.create({
   image: {
     width: 70,
     height: 70,
-    borderRadius: 10
+    borderRadius: 10,
+    backgroundColor: '#EEF2F6'
   },
 
   info: {
@@ -291,6 +385,11 @@ const styles = StyleSheet.create({
     color: '#1F2A1F'
   },
 
+  metaText: {
+    color: '#475467',
+    marginTop: 2
+  },
+
   price: {
     fontWeight: 'bold',
     fontSize: 16,
@@ -299,12 +398,22 @@ const styles = StyleSheet.create({
   },
 
   packed: {
-    color: 'orange',
+    color: '#B54708',
+    fontWeight: 'bold'
+  },
+
+  shipped: {
+    color: '#175CD3',
     fontWeight: 'bold'
   },
 
   delivered: {
     color: 'green',
+    fontWeight: 'bold'
+  },
+
+  cancelled: {
+    color: '#B42318',
     fontWeight: 'bold'
   },
 

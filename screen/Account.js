@@ -237,9 +237,15 @@ const AccountScreen = ({ navigation }) => {
     },
 
     {
-      icon: 'heart',
-      title: 'Favourites',
-      navigateTo: 'FavoritesScreen',
+      icon: 'receipt',
+      title: 'My Orders',
+      navigateTo: 'MyOrders',
+    },
+
+    {
+      icon: 'language',
+      title: 'Language',
+      navigateTo: 'LanguageSettings',
     },
 
     {

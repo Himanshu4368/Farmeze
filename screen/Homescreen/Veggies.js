@@ -107,6 +107,7 @@ const Veggies = ({ navigation, route }) => {
             <View style={styles.card}>
               <TouchableOpacity
                 activeOpacity={0.88}
+                style={styles.productTap}
                 onPress={() => handleNavigateToProduct(item)}
               >
                 <View style={styles.imageWrap}>
@@ -178,11 +179,11 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   row: {
-    gap: 12,
+    justifyContent: 'space-between',
   },
   card: {
-    flex: 1,
-    minHeight: 266,
+    width: '48%',
+    height: 286,
     marginBottom: 14,
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -190,6 +191,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DCEED8',
     elevation: 3
+  },
+  productTap: {
+    height: 232,
   },
   imageWrap: {
     height: 122,
@@ -205,6 +209,7 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     padding: 12,
+    height: 110,
   },
   name: {
     fontSize: 16,
@@ -214,7 +219,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   type: {
-    minHeight: 34,
+    height: 34,
     fontSize: 12,
     lineHeight: 17,
     color: '#687368',
@@ -225,11 +230,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 12,
+    height: 24,
   },
   price: {
     fontSize: 15,
     fontWeight: '800',
     color: '#2E7D32',
+    flex: 1,
   },
   badge: {
     backgroundColor: '#E7F6E2',

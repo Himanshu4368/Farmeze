@@ -16,21 +16,63 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { useClerk } from '@clerk/expo';
+import {
+  getUserProfile,
+  updateUserProfile
+} from '../../api/authApi';
 
 const AccountDetailsScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
   const [profileImage, setProfileImage] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const { signOut } = useClerk();
 
   useEffect(() => {
     const loadUser = async () => {
-      const userData = await AsyncStorage.getItem('user');
+      try {
+        const userData = await AsyncStorage.getItem('user');
+        if (!userData) {
+          return;
+        }
 
-      if (userData) {
         const parsed = JSON.parse(userData);
-        setUser(parsed);
+        const userId = parsed.id || parsed._id;
+        const isMongoId =
+          /^[a-f\d]{24}$/i.test(String(userId || ''));
 
-        if (parsed.profileImage) {
-          setProfileImage(parsed.profileImage);
+        let profile = {
+          ...parsed,
+          id: userId || parsed.clerkId || '',
+          _id: userId || parsed.clerkId || '',
+          address:
+            parsed.address ||
+            [parsed.address1, parsed.address2]
+              .filter(Boolean)
+              .join(', '),
+          pincode:
+            parsed.pincode ||
+            parsed.pinCode ||
+            '',
+        };
+
+        if (isMongoId) {
+          profile = await getUserProfile(userId);
+          await AsyncStorage.setItem('user', JSON.stringify(profile));
+        }
+
+        setUser(profile);
+        if (profile.profileImage) {
+          setProfileImage(profile.profileImage);
+        }
+      } catch (error) {
+        const fallbackUser = await AsyncStorage.getItem('user');
+        if (fallbackUser) {
+          const parsed = JSON.parse(fallbackUser);
+          setUser(parsed);
+          if (parsed.profileImage) {
+            setProfileImage(parsed.profileImage);
+          }
         }
       }
     };
@@ -69,17 +111,65 @@ const AccountDetailsScreen = ({ navigation }) => {
   };
 
   const handleSave = async () => {
-    const updatedUser = { ...user, profileImage };
-    setUser(updatedUser);
+    try {
+      setSaving(true);
 
-    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      const userId = user.id || user._id;
+      const isMongoId =
+        /^[a-f\d]{24}$/i.test(String(userId || ''));
 
-    Alert.alert('Success', 'Profile updated locally');
+      if (!isMongoId) {
+        const localUser = {
+          ...user,
+          profileImage,
+        };
+
+        setUser(localUser);
+        await AsyncStorage.setItem('user', JSON.stringify(localUser));
+        Alert.alert('Success', 'Profile saved locally');
+        return;
+      }
+
+      const updatedUser = await updateUserProfile(
+        userId,
+        {
+          ...user,
+          profileImage,
+        }
+      );
+
+      setUser(updatedUser);
+
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+
+      Alert.alert('Success', 'Profile updated');
+    } catch (error) {
+      Alert.alert(
+        'Update Failed',
+        error.response?.data?.message ||
+        'Unable to update profile'
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.log(
+        'CLERK SIGNOUT ERROR:',
+        error.message
+      );
+    }
+
     await AsyncStorage.clear();
-    navigation.replace('LoginScreen');
+    setUser(null);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'LoginScreen' }],
+    });
   };
 
   if (!user) {
@@ -103,7 +193,9 @@ const AccountDetailsScreen = ({ navigation }) => {
         <Text style={styles.headerText}>Account Details</Text>
 
         <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.saveButtonText}>SAVE</Text>
+          <Text style={styles.saveButtonText}>
+            {saving ? 'SAVING' : 'SAVE'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -134,7 +226,7 @@ const AccountDetailsScreen = ({ navigation }) => {
           <Text style={styles.label}>NAME</Text>
           <TextInput
             style={styles.input}
-            value={user.name}
+            value={user.name || ''}
             onChangeText={(text) =>
               setUser({ ...user, name: text })
             }
@@ -146,10 +238,69 @@ const AccountDetailsScreen = ({ navigation }) => {
           <Text style={styles.label}>PHONE</Text>
           <TextInput
             style={styles.input}
-            value={user.phone}
+            value={user.phone || ''}
             keyboardType="phone-pad"
             onChangeText={(text) =>
               setUser({ ...user, phone: text })
+            }
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>EMAIL</Text>
+          <TextInput
+            style={styles.input}
+            value={user.email || ''}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            onChangeText={(text) =>
+              setUser({ ...user, email: text })
+            }
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>ADDRESS</Text>
+          <TextInput
+            style={[styles.input, styles.addressInput]}
+            value={user.address || ''}
+            multiline
+            onChangeText={(text) =>
+              setUser({ ...user, address: text })
+            }
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>CITY</Text>
+          <TextInput
+            style={styles.input}
+            value={user.city || ''}
+            onChangeText={(text) =>
+              setUser({ ...user, city: text })
+            }
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>STATE</Text>
+          <TextInput
+            style={styles.input}
+            value={user.state || ''}
+            onChangeText={(text) =>
+              setUser({ ...user, state: text })
+            }
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>PINCODE</Text>
+          <TextInput
+            style={styles.input}
+            value={user.pincode || ''}
+            keyboardType="number-pad"
+            onChangeText={(text) =>
+              setUser({ ...user, pincode: text })
             }
           />
         </View>
@@ -265,5 +416,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 50,
     color: '#1F2A1F',
+  },
+
+  addressInput: {
+    minHeight: 82,
+    textAlignVertical: 'top',
+    paddingTop: 12,
   },
 });

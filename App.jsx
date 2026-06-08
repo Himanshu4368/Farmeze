@@ -1,5 +1,7 @@
 import React from 'react';
+import 'react-native-url-polyfill/auto';
 import { View, Text } from 'react-native';
+import { ClerkProvider } from '@clerk/expo';
 
 import { NavigationContainer } from '@react-navigation/native';
 
@@ -20,27 +22,24 @@ import {
 }
 from './screen/Homescreen/CartContext';
 
-import {
-  FavoritesProvider
-}
-from './screen/Profile/FavoritesContext';
-
-
 // Screens
 import Homescreen from './screen/Homescreen';
 import Cart from './screen/Cart';
 import OrderScreen from './screen/Order';
+import OrderDetails from './screen/OrderDetails';
 
 import Veggies from './screen/Homescreen/Veggies';
 import ProductScreen from './screen/ProductDescription';
 
 import Checkout from './screen/Checkout';
+import DiscountPromotions from './screen/DiscountPromotions';
 
 import AccountScreen from './screen/Account';
 import NotificationsScreen from './screen/Notification';
 
 import AccountDetailsScreen from './screen/Profile/AccountDetails';
-import FavoritesScreen from './screen/Profile/Favourites';
+import MyOrders from './screen/Profile/MyOrders';
+import LanguageSettings from './screen/Profile/LanguageSettings';
 import AboutUs from './screen/Profile/AboutUs';
 
 import AuthScreen from './screen/Profile/AuthScreen';
@@ -66,7 +65,10 @@ from './screen/Homescreen/OurFarmers';
 
 import FarmerDetailsScreen
 from './screen/FarmerDetails';
-
+import {
+  CLERK_PUBLISHABLE_KEY,
+  clerkTokenCache
+} from './config/clerk';
 
 const Tab=createBottomTabNavigator();
 
@@ -256,9 +258,12 @@ export default function App(){
 
 return(
 
-<CartProvider>
+<ClerkProvider
+publishableKey={CLERK_PUBLISHABLE_KEY}
+tokenCache={clerkTokenCache}
+>
 
-<FavoritesProvider>
+<CartProvider>
 
 <NavigationContainer>
 
@@ -278,6 +283,11 @@ component={TabNavigatorWithCartBadge}
 <Stack.Screen
 name="Checkout"
 component={Checkout}
+/>
+
+<Stack.Screen
+name="DiscountPromotions"
+component={DiscountPromotions}
 />
 
 <Stack.Screen
@@ -311,8 +321,13 @@ component={AccountDetailsScreen}
 />
 
 <Stack.Screen
-name="FavoritesScreen"
-component={FavoritesScreen}
+name="MyOrders"
+component={MyOrders}
+/>
+
+<Stack.Screen
+name="LanguageSettings"
+component={LanguageSettings}
 />
 
 <Stack.Screen
@@ -351,6 +366,11 @@ component={OrderPlacedScreen}
 />
 
 <Stack.Screen
+name="OrderDetails"
+component={OrderDetails}
+/>
+
+<Stack.Screen
 name="ComingSoonScreen"
 component={ComingSoonScreen}
 />
@@ -369,9 +389,9 @@ component={FarmerDetailsScreen}
 
 </NavigationContainer>
 
-</FavoritesProvider>
-
 </CartProvider>
+
+</ClerkProvider>
 
 );
 
